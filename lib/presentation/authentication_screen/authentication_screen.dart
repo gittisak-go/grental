@@ -127,7 +127,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
         // Show success toast
         Fluttertoast.showToast(
-          msg: "Login successful! Welcome to TaxiHouse",
+          msg: "Login successful! Welcome to RungrojCarRental",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: AppTheme.lightTheme.colorScheme.primary,

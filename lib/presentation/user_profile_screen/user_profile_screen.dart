@@ -26,11 +26,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   // Mock user data with Thai localization
   final Map<String, dynamic> _userData = {
-    "name": "Sarah Johnson",
-    "email": "sarah.johnson@email.com",
+    "name": "Patteera Sunatrai",
+    "email": "Patty_patteera19@hotmail.com",
     "phone": "086 634 8619",
-    "membershipStatus": "สมาชิกพรีเมียม",
-    "profileImage": "assets/images/sarah_johnson_profile.png",
+    "membershipStatus": "CEO (Chief Executive Officer)",
+    "profileImage": "assets/images/ceo-1767538725333.jpg",
     "emergencyContacts": [
       {
         "name": "John Johnson",
@@ -210,9 +210,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'directions_car',
                   title: 'Default Vehicle Type',
-                  subtitle:
-                      (_userData["preferences"] as Map)["vehicleType"]
-                          as String,
+                  subtitle: (_userData["preferences"] as Map)["vehicleType"]
+                      as String,
                   onTap: _showVehicleTypeDialog,
                 ),
                 ProfileMenuItemWidget(
@@ -225,9 +224,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'note',
                   title: 'Pickup Instructions',
-                  subtitle:
-                      (_userData["preferences"] as Map)["pickupInstructions"]
-                          as String,
+                  subtitle: (_userData["preferences"]
+                      as Map)["pickupInstructions"] as String,
                   onTap: _showInstructionsDialog,
                 ),
               ],
@@ -281,7 +279,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 ProfileMenuItemWidget(
                   icon: 'info',
-                  title: 'About TaxiHouse',
+                  title: 'About RungrojCarRental',
                   subtitle: 'เวอร์ชัน 1.0.0',
                   onTap: _showAboutDialog,
                 ),
@@ -781,9 +779,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About TaxiHouse'),
+        title: const Text('About RungrojCarRental'),
         content: const Text(
-          'TaxiHouse v1.0.0\n\nประสบการณ์การจองรถแท็กซี่พรีเมียมด้วยการออกแบบแบบภาพยนตร์\n\n© 2024 TaxiHouse สงวนลิขสิทธิ์',
+          'RungrojCarRental v1.0.0\n\nประสบการณ์การจองรถแท็กซี่พรีเมียมด้วยการออกแบบแบบภาพยนตร์\n\n© 2024 RungrojCarRental สงวนลิขสิทธิ์',
         ),
         actions: [
           TextButton(

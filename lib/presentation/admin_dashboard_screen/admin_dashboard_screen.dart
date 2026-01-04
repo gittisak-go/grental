@@ -22,6 +22,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final ReservationService _reservationService = ReservationService();
   final VehicleService _vehicleService = VehicleService();
+  final SupabaseService _supabaseService = SupabaseService.instance;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -53,7 +54,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _setupRealtimeSubscriptions() async {
     try {
       // Subscribe to reservations table changes
-      _reservationsSubscription = SupabaseService.client
+      _reservationsSubscription = _supabaseService.client
           .from('reservations')
           .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
         if (mounted) {
@@ -71,7 +72,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
 
       // Subscribe to vehicles table changes
-      _vehiclesSubscription = SupabaseService.client
+      _vehiclesSubscription = _supabaseService.client
           .from('vehicles')
           .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
         if (mounted) {

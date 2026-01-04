@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TaxiHouse</string>
+	<string>RungrojCarRental</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>TaxiHouse</string>
+	<string>RungrojCarRental</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -47,8 +47,8 @@
 	<true/>
 	<!-- Location permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>TaxiHouse needs your location to detect your pickup point and provide accurate ride services.</string>
+	<string>RungrojCarRental needs your location to detect your pickup point and provide accurate ride services.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>TaxiHouse needs your location to detect your pickup point and provide accurate ride services.</string>
+	<string>RungrojCarRental needs your location to detect your pickup point and provide accurate ride services.</string>
 </dict>
 </plist>

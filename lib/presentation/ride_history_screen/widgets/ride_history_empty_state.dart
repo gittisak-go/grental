@@ -133,7 +133,7 @@ class RideHistoryEmptyState extends StatelessWidget {
           : 'No rides match your current filters. Try adjusting your search criteria.';
     } else {
       description =
-          'Start your journey with TaxiHouse! Book your first ride and experience premium transportation with professional drivers.';
+          'Start your journey with RungrojCarRental! Book your first ride and experience premium transportation with professional drivers.';
     }
 
     return Text(

@@ -68,12 +68,6 @@ class CustomBottomBar extends StatelessWidget {
       route: '/live-tracking-screen',
     ),
     BottomNavItem(
-      icon: Icons.history_outlined,
-      activeIcon: Icons.history_rounded,
-      label: 'History',
-      route: '/ride-history-screen',
-    ),
-    BottomNavItem(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
       label: 'Profile',

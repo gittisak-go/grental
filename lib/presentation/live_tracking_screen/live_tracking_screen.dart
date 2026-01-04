@@ -375,7 +375,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
           ],
         ),
         content: const Text(
-          "Are you in an emergency situation? This will immediately contact emergency services and notify TaxiHouse support.",
+          "Are you in an emergency situation? This will immediately contact emergency services and notify RungrojCarRental support.",
         ),
         actions: [
           TextButton(

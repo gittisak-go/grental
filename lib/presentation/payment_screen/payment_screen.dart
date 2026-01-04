@@ -542,7 +542,7 @@ class _PaymentScreenState extends State<PaymentScreen>
       child: Column(
         children: [
           Text(
-            'TaxiHouse',
+            'RungrojCarRental',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: theme.colorScheme.primary,

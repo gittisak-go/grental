@@ -260,7 +260,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         SizedBox(height: 1.h),
                         Text(
-                          '© 2024 TaxiHouse. All rights reserved.',
+                          '© 2024 RungrojCarRental. All rights reserved.',
                           style:
                               AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
                             color: AppTheme

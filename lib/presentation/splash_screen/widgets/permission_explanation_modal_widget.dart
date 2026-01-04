@@ -67,7 +67,7 @@ class PermissionExplanationModalWidget extends StatelessWidget {
               ),
               SizedBox(height: 2.h),
               Text(
-                'TaxiHouse needs access to your location to provide accurate pickup points and real-time tracking for your rides.',
+                'RungrojCarRental needs access to your location to provide accurate pickup points and real-time tracking for your rides.',
                 style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
                   color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
                   height: 1.5,

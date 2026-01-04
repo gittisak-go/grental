@@ -46,7 +46,7 @@ class AppLogoWidget extends StatelessWidget {
 
         // App name with premium typography
         Text(
-          'TaxiHouse',
+          'RungrojCarRental',
           style: theme.textTheme.headlineMedium?.copyWith(
             color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w700,

@@ -110,7 +110,7 @@ class _AnimatedLogoWidgetState extends State<AnimatedLogoWidget>
                     ),
                     SizedBox(height: 1.h),
                     Text(
-                      'TaxiHouse',
+                      'RungrojCarRental',
                       style:
                           AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
                         color: AppTheme.lightTheme.colorScheme.onPrimary,

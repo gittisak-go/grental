@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import './edit_vehicle_dialog.dart';
 
 class VehicleSelectionCarousel extends StatefulWidget {
   final int selectedIndex;
@@ -24,64 +25,61 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
   late PageController _pageController;
   int _currentIndex = 0;
 
-  final List<Map<String, dynamic>> _vehicles = [
+  // Updated with Thai Baht prices
+  List<Map<String, dynamic>> _vehicles = [
     {
       "id": 1,
-      "type": "TaxiHouse Standard",
+      "type": "RungrojCarRental Standard",
       "description": "Comfortable rides for everyday trips",
-      "image":
-          "https://images.unsplash.com/photo-1726003514379-033ea2ef59f5",
+      "image": "https://images.unsplash.com/photo-1726003514379-033ea2ef59f5",
       "semanticLabel":
           "Silver sedan car parked on city street with modern buildings in background",
       "capacity": "4 passengers",
       "estimatedArrival": "3 min",
-      "price": "\$12.50",
-      "pricePerMile": "\$2.10",
+      "price": "฿437.50",
+      "pricePerMile": "฿73.50",
       "features": ["Air Conditioning", "Music System", "Phone Charger"],
       "available": true,
     },
     {
       "id": 2,
-      "type": "TaxiHouse Premium",
+      "type": "RungrojCarRental Premium",
       "description": "Luxury vehicles with premium amenities",
-      "image":
-          "https://images.unsplash.com/photo-1701985344392-f9b6b6768b14",
+      "image": "https://images.unsplash.com/photo-1701985344392-f9b6b6768b14",
       "semanticLabel":
           "Black luxury sedan with tinted windows parked in front of modern glass building",
       "capacity": "4 passengers",
       "estimatedArrival": "5 min",
-      "price": "\$18.75",
-      "pricePerMile": "\$3.25",
+      "price": "฿656.25",
+      "pricePerMile": "฿113.75",
       "features": ["Leather Seats", "Wi-Fi", "Refreshments", "Premium Sound"],
       "available": true,
     },
     {
       "id": 3,
-      "type": "TaxiHouse XL",
+      "type": "RungrojCarRental XL",
       "description": "Spacious SUVs for groups and luggage",
-      "image":
-          "https://images.unsplash.com/photo-1616452647790-c14899d4982b",
+      "image": "https://images.unsplash.com/photo-1616452647790-c14899d4982b",
       "semanticLabel":
           "White SUV parked on urban street with city skyline visible in background",
       "capacity": "6 passengers",
       "estimatedArrival": "4 min",
-      "price": "\$22.00",
-      "pricePerMile": "\$3.80",
+      "price": "฿770.00",
+      "pricePerMile": "฿133.00",
       "features": ["Extra Space", "Luggage Room", "Child Seats Available"],
       "available": true,
     },
     {
       "id": 4,
-      "type": "TaxiHouse Eco",
+      "type": "RungrojCarRental Eco",
       "description": "Environmentally friendly hybrid vehicles",
-      "image":
-          "https://images.unsplash.com/photo-1502826114304-08437d996289",
+      "image": "https://images.unsplash.com/photo-1502826114304-08437d996289",
       "semanticLabel":
           "Green hybrid car parked near trees with eco-friendly design elements visible",
       "capacity": "4 passengers",
       "estimatedArrival": "6 min",
-      "price": "\$10.25",
-      "pricePerMile": "\$1.85",
+      "price": "฿358.75",
+      "pricePerMile": "฿64.75",
       "features": ["Eco-Friendly", "Quiet Ride", "Low Emissions"],
       "available": false,
     },
@@ -107,7 +105,7 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
           child: Text(
-            'Choose your ride',
+            'เลือกประเภทรถของคุณ',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: theme.colorScheme.onSurface,
@@ -145,7 +143,7 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
                     );
                   },
                   onLongPress: () => widget.onVehicleLongPress?.call(vehicle),
-                  child: _buildVehicleCard(vehicle, isSelected, theme),
+                  child: _buildVehicleCard(vehicle, isSelected, theme, index),
                 ),
               );
             },
@@ -157,8 +155,8 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
     );
   }
 
-  Widget _buildVehicleCard(
-      Map<String, dynamic> vehicle, bool isSelected, ThemeData theme) {
+  Widget _buildVehicleCard(Map<String, dynamic> vehicle, bool isSelected,
+      ThemeData theme, int index) {
     final isAvailable = vehicle["available"] as bool;
 
     return AnimatedContainer(
@@ -198,8 +196,8 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
-                    color:
-                        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                   ),
                   child: ClipRRect(
                     borderRadius: const BorderRadius.only(
@@ -353,7 +351,45 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
                 ),
               ),
             ),
+          // Edit button
+          Positioned(
+            top: 2.w,
+            left: 2.w,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showEditDialog(vehicle, index),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: CustomIconWidget(
+                    iconName: 'edit',
+                    color: theme.colorScheme.onSecondaryContainer,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showEditDialog(Map<String, dynamic> vehicle, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => EditVehicleDialog(
+        vehicle: vehicle,
+        onSave: (updatedVehicle) {
+          setState(() {
+            _vehicles[index] = updatedVehicle;
+          });
+        },
       ),
     );
   }
