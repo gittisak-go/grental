@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
+import 'dart:async';
 
 import '../../core/app_export.dart';
 import '../../models/reservation_model.dart';
@@ -9,6 +10,7 @@ import '../../models/vehicle_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/reservation_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/supabase_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -30,10 +32,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 7));
   DateTime _endDate = DateTime.now();
 
+  // Real-time subscription streams
+  StreamSubscription? _reservationsSubscription;
+  StreamSubscription? _vehiclesSubscription;
+
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _setupRealtimeSubscriptions();
+  }
+
+  @override
+  void dispose() {
+    _reservationsSubscription?.cancel();
+    _vehiclesSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _setupRealtimeSubscriptions() async {
+    try {
+      // Subscribe to reservations table changes
+      _reservationsSubscription = SupabaseService.client
+          .from('reservations')
+          .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
+        if (mounted) {
+          setState(() {
+            _allReservations =
+                data.map((json) => ReservationModel.fromJson(json)).toList();
+          });
+        }
+      }, onError: (error) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
+          });
+        }
+      });
+
+      // Subscribe to vehicles table changes
+      _vehiclesSubscription = SupabaseService.client
+          .from('vehicles')
+          .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
+        if (mounted) {
+          setState(() {
+            _allVehicles =
+                data.map((json) => VehicleModel.fromJson(json)).toList();
+          });
+        }
+      }, onError: (error) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
+          });
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'ไม่สามารถตั้งค่าการเชื่อมต่อแบบเรียลไทม์: $e';
+        });
+      }
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -86,7 +146,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   int get _activeCustomersCount {
     return _allReservations
-        .where((r) => r.status == ReservationStatus.active || r.status == ReservationStatus.confirmed)
+        .where((r) =>
+            r.status == ReservationStatus.active ||
+            r.status == ReservationStatus.confirmed)
         .map((r) => r.customerEmail)
         .toSet()
         .length;
@@ -99,13 +161,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        title: Text(
-          'แดชบอร์ดผู้ดูแลระบบ',
-          style: TextStyle(
-            color: Colors.grey[900],
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            Text(
+              'แดชบอร์ดผู้ดูแลระบบ',
+              style: TextStyle(
+                color: Colors.grey[900],
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 2.w),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.3.h),
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(26),
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(width: 1.w),
+                  Text(
+                    'สด',
+                    style: TextStyle(
+                      fontSize: 9.sp,
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -555,8 +650,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildCustomerMetrics() {
     final uniqueCustomers =
         _allReservations.map((r) => r.customerEmail).toSet().length;
-    final completedReservations =
-        _allReservations.where((r) => r.status == ReservationStatus.completed).length;
+    final completedReservations = _allReservations
+        .where((r) => r.status == ReservationStatus.completed)
+        .length;
     final retentionRate = _allReservations.isEmpty
         ? 0.0
         : (completedReservations / _allReservations.length) * 100;
@@ -680,7 +776,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
                 decoration: BoxDecoration(
-                  color: Colors.pink.withAlpha(26),
+                  color: Colors.green.withAlpha(26),
                   borderRadius: BorderRadius.circular(12.0),
                 ),
                 child: Row(
@@ -689,16 +785,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       width: 8,
                       height: 8,
                       decoration: const BoxDecoration(
-                        color: Colors.pink,
+                        color: Colors.green,
                         shape: BoxShape.circle,
                       ),
                     ),
                     SizedBox(width: 1.w),
                     Text(
-                      'สด',
+                      'เรียลไทม์',
                       style: TextStyle(
                         fontSize: 10.sp,
-                        color: Colors.pink,
+                        color: Colors.green,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -708,86 +804,118 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           SizedBox(height: 2.h),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: recentReservations.length,
-            separatorBuilder: (context, index) => Divider(height: 2.h),
-            itemBuilder: (context, index) {
-              final reservation = recentReservations[index];
-              final vehicle = _allVehicles.firstWhere(
-                (v) => v.id == reservation.vehicleId,
-                orElse: () => VehicleModel(
-                  id: '',
-                  brand: 'ไม่ทราบ',
-                  model: '',
-                  year: 0,
-                  seats: 0,
-                  transmission: '',
-                  fuelType: '',
-                  pricePerDay: 0,
-                  imageUrl: '',
-                  isAvailable: true,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                ),
-              );
-
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor:
-                      _getStatusColor(reservation.status.toString().split('.').last).withAlpha(51),
-                  child: Icon(
-                    Icons.directions_car,
-                    color: _getStatusColor(reservation.status.toString().split('.').last),
-                  ),
-                ),
-                title: Text(
-                  reservation.customerName,
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                subtitle: Text(
-                  '${vehicle.brand} ${vehicle.model} • ${DateFormat('dd MMM yyyy', 'th').format(reservation.startDate)}',
-                  style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '฿${NumberFormat('#,##0').format(reservation.totalAmount)}',
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
+          recentReservations.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 3.h),
+                    child: Column(
+                      children: [
+                        Icon(Icons.event_busy,
+                            size: 48, color: Colors.grey[300]),
+                        SizedBox(height: 1.h),
+                        Text(
+                          'ยังไม่มีการจอง',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 2.w, vertical: 0.3.h),
-                      decoration: BoxDecoration(
-                        color:
-                            _getStatusColor(reservation.status.toString().split('.').last).withAlpha(26),
-                        borderRadius: BorderRadius.circular(8.0),
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recentReservations.length,
+                  separatorBuilder: (context, index) => Divider(height: 2.h),
+                  itemBuilder: (context, index) {
+                    final reservation = recentReservations[index];
+                    final vehicle = _allVehicles.firstWhere(
+                      (v) => v.id == reservation.vehicleId,
+                      orElse: () => VehicleModel(
+                        id: '',
+                        brand: 'ไม่ทราบ',
+                        model: '',
+                        year: 0,
+                        seats: 0,
+                        transmission: '',
+                        fuelType: '',
+                        pricePerDay: 0,
+                        imageUrl: '',
+                        isAvailable: true,
+                        createdAt: DateTime.now(),
+                        updatedAt: DateTime.now(),
                       ),
-                      child: Text(
-                        _getStatusText(reservation.status.toString().split('.').last),
+                    );
+
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: _getStatusColor(
+                                reservation.status.toString().split('.').last)
+                            .withAlpha(51),
+                        child: Icon(
+                          Icons.directions_car,
+                          color: _getStatusColor(
+                              reservation.status.toString().split('.').last),
+                        ),
+                      ),
+                      title: Text(
+                        reservation.customerName,
                         style: TextStyle(
-                          fontSize: 9.sp,
-                          color: _getStatusColor(reservation.status.toString().split('.').last),
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
+                      subtitle: Text(
+                        '${vehicle.brand} ${vehicle.model} • ${DateFormat('dd MMM yyyy', 'th').format(reservation.startDate)}',
+                        style:
+                            TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '฿${NumberFormat('#,##0').format(reservation.totalAmount)}',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 2.w, vertical: 0.3.h),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(reservation.status
+                                      .toString()
+                                      .split('.')
+                                      .last)
+                                  .withAlpha(26),
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: Text(
+                              _getStatusText(reservation.status
+                                  .toString()
+                                  .split('.')
+                                  .last),
+                              style: TextStyle(
+                                fontSize: 9.sp,
+                                color: _getStatusColor(reservation.status
+                                    .toString()
+                                    .split('.')
+                                    .last),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -832,15 +960,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 'เพิ่มรถใหม่',
                 Icons.add_circle,
                 Colors.blue,
-                () => Navigator.pushNamed(
-                    context, AppRoutes.vehicleManagement),
+                () => Navigator.pushNamed(context, AppRoutes.vehicleManagement),
               ),
               _buildQuickActionButton(
                 'จัดการการจอง',
                 Icons.event_note,
                 Colors.orange,
-                () => Navigator.pushNamed(
-                    context, AppRoutes.adminReservations),
+                () => Navigator.pushNamed(context, AppRoutes.adminReservations),
               ),
               _buildQuickActionButton(
                 'สร้างรายงาน',
