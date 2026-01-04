@@ -4,15 +4,11 @@ import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
-import '../../routes/app_routes.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
-import './widgets/advanced_options_section.dart';
 import './widgets/fare_estimation_widget.dart';
 import './widgets/promo_banner_widget.dart';
 import './widgets/request_ride_button.dart';
 import './widgets/vehicle_selection_carousel.dart';
-import './widgets/welcome_header_widget.dart';
 
 class RideRequestScreen extends StatefulWidget {
   const RideRequestScreen({super.key});
@@ -684,6 +680,22 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           _buildContactRow(theme, 'phone', 'สายด่วน 2', '096-363-8519'),
           SizedBox(height: 1.h),
           _buildContactRow(theme, 'chat', 'Line ID', '@rungroj'),
+          SizedBox(height: 1.h),
+          _buildClickableContactRow(
+            theme,
+            'messenger',
+            'ตรวจสอบสลิปโอนเงิน',
+            'm.me/553199731216723',
+            () => _launchUrl('https://m.me/553199731216723'),
+          ),
+          SizedBox(height: 1.h),
+          _buildClickableContactRow(
+            theme,
+            'chat_bubble',
+            'ทีมขาย LINE',
+            'page.line.me/rungroj',
+            () => _launchUrl('https://page.line.me/rungroj'),
+          ),
           SizedBox(height: 1.5.h),
           Divider(height: 1),
           SizedBox(height: 1.5.h),
@@ -778,6 +790,59 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildClickableContactRow(
+    ThemeData theme,
+    String iconName,
+    String label,
+    String value,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 0.5.h),
+        child: Row(
+          children: [
+            CustomIconWidget(
+              iconName: iconName,
+              color: theme.colorScheme.primary,
+              size: 18,
+            ),
+            SizedBox(width: 2.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: theme.colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1145,7 +1210,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
   Widget _buildFareBreakdownModal() {
     final theme = Theme.of(context);
-    
+
     final dailyRate = 800;
     int total = dailyRate * _rentalDays;
     if (_rentalDays >= 7) {
@@ -1201,6 +1266,37 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('ไม่สามารถเปิดลิงก์ได้ กรุณาลองใหม่อีกครั้ง'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

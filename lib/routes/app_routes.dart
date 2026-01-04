@@ -4,12 +4,14 @@ import '../presentation/admin_dashboard_screen/admin_dashboard_screen.dart';
 import '../presentation/admin_reservations_screen/admin_reservations_screen.dart';
 import '../presentation/authentication_screen/authentication_screen.dart';
 import '../presentation/bank_info_screen/bank_info_screen.dart';
+import '../presentation/checkout_screen/checkout_screen.dart';
 import '../presentation/driver_management_screen/driver_management_screen.dart';
 import '../presentation/driver_profile_screen/driver_profile_screen.dart';
 import '../presentation/fleet_inventory_screen/fleet_inventory_screen.dart';
 import '../presentation/live_tracking_screen/live_tracking_screen.dart';
 import '../presentation/location_detection_screen/location_detection_screen.dart';
 import '../presentation/payment_screen/payment_screen.dart';
+import '../presentation/rental_status_screen/rental_status_screen.dart';
 import '../presentation/ride_history_screen/ride_history_screen.dart';
 import '../presentation/ride_request_screen/ride_request_screen.dart';
 import '../presentation/splash_screen/splash_screen.dart';
@@ -34,6 +36,8 @@ class AppRoutes {
   static const String adminDashboardScreen = '/admin-dashboard-screen';
   static const String driverManagementScreen = '/driver-management-screen';
   static const String fleetInventoryScreen = '/fleet-inventory-screen';
+  static const String checkoutScreen = '/checkout-screen';
+  static const String rentalStatusScreen = '/rental-status-screen';
 
   static Map<String, WidgetBuilder> get routes => {
         initial: (context) => const RideRequestScreen(),
@@ -52,6 +56,8 @@ class AppRoutes {
         adminDashboardScreen: (context) => const AdminDashboardScreen(),
         driverManagementScreen: (context) => const DriverManagementScreen(),
         fleetInventoryScreen: (context) => const FleetInventoryScreen(),
+        checkoutScreen: (context) => const CheckoutScreen(),
+        rentalStatusScreen: (context) => const RentalStatusScreen(),
         // TODO: Add your other routes here
       };
 }
