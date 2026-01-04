@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
@@ -26,7 +27,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   final TextEditingController _destinationController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  String _pickupLocation = "Times Square, New York, NY";
+  String _pickupLocation = "สนามบินนานาชาติอุดรธานี, จังหวัดอุดรธานี 41000";
   String _destinationLocation = "";
   int _selectedVehicleIndex = 0;
   bool _isAdvancedOptionsExpanded = false;
@@ -37,49 +38,37 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
   String _promoCode = "";
 
   final List<String> _recentDestinations = [
-    "Central Park, New York, NY",
-    "Brooklyn Bridge, New York, NY",
-    "Empire State Building, New York, NY",
-    "Statue of Liberty, New York, NY",
-    "One World Trade Center, New York, NY",
+    "ศูนย์การค้าเซ็นทรัลพลาซ่า อุดรธานี",
+    "โรงแรมเซ็นทารา อุดรธานี",
+    "ตลาดกลางเวียง อุดรธานี",
+    "มหาวิทยาลัยอุดรธานี",
+    "หาดหนองประจักษ์ อุดรธานี",
   ];
 
   final List<Map<String, String>> _quickActions = [
     {
       "title": "Work",
-      "address": "350 5th Ave, New York",
-      "icon": "work_outline"
+      "address": "79QPF+QQM Chiang Phin, อุดรธานี",
+      "icon": "work_outline",
     },
-    {"title": "Home", "address": "Times Square", "icon": "home_outlined"},
+    {"title": "Home", "address": "สนามบินอุดรธานี", "icon": "home_outlined"},
     {
       "title": "Airport",
-      "address": "JFK International",
-      "icon": "local_airport"
+      "address": "สนามบินนานาชาติอุดรธานี",
+      "icon": "local_airport",
     },
-    {"title": "Gym", "address": "Central Park West", "icon": "fitness_center"},
+    {"title": "Gym", "address": "ศูนย์กีฬาอุดรธานี", "icon": "fitness_center"},
   ];
 
   final List<Map<String, dynamic>> _vehicleData = [
     {
       "type": "TaxiHouse Standard",
-      "baseFare": "\$3.50",
-      "estimatedTotal": "\$12.50",
+      "baseFare": "฿120",
+      "estimatedTotal": "฿450",
     },
-    {
-      "type": "TaxiHouse Premium",
-      "baseFare": "\$5.25",
-      "estimatedTotal": "\$18.75",
-    },
-    {
-      "type": "TaxiHouse XL",
-      "baseFare": "\$6.50",
-      "estimatedTotal": "\$22.00",
-    },
-    {
-      "type": "TaxiHouse Eco",
-      "baseFare": "\$2.75",
-      "estimatedTotal": "\$10.25",
-    },
+    {"type": "TaxiHouse Premium", "baseFare": "฿180", "estimatedTotal": "฿680"},
+    {"type": "TaxiHouse XL", "baseFare": "฿220", "estimatedTotal": "฿800"},
+    {"type": "TaxiHouse Eco", "baseFare": "฿95", "estimatedTotal": "฿370"},
   ];
 
   @override
@@ -103,6 +92,30 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          '🚗 รถเช่าอุดรธานี ไม่ใช้บัตรเครดิต',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.account_balance),
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.bankInfoScreen);
+            },
+            tooltip: 'ข้อมูลการชำระเงิน',
+          ),
+          IconButton(
+            icon: Icon(Icons.notifications),
+            onPressed: () => _showNotifications(),
+            tooltip: 'แจ้งเตือน',
+          ),
+        ],
+      ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: RefreshIndicator(
         onRefresh: _refreshData,
@@ -112,7 +125,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           slivers: [
             // App bar with gradient
             SliverAppBar(
-              expandedHeight: 18.h,
+              expandedHeight: 25.h,
               floating: false,
               pinned: true,
               backgroundColor: theme.colorScheme.primary,
@@ -129,9 +142,36 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                     ),
                   ),
                   child: SafeArea(
-                    child: WelcomeHeaderWidget(
-                      userName: "John",
-                      onNotificationTap: () => _showNotifications(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        WelcomeHeaderWidget(
+                          userName: "รุ่งโรจน์คาร์เร้นท์",
+                          onNotificationTap: () => _showNotifications(),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 5.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '🚗 รถเช่าอุดรธานี ไม่ใช้บัตรเครดิต',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 0.5.h),
+                              Text(
+                                'รับ-ส่งฟรีถึงมือ • รถใหม่สะอาด • บริการด้วยใจ',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -143,10 +183,16 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 2.h),
+                  // Selling points banner
+                  _buildSellingPointsBanner(theme),
+                  SizedBox(height: 2.h),
+                  // Contact information card
+                  _buildContactCard(theme),
+                  SizedBox(height: 2.h),
                   // Promo banner
                   PromoBannerWidget(
-                    title: "🎉 Get 25% OFF",
-                    subtitle: "On your next 3 rides",
+                    title: "🎉 รับส่วนลด 25%",
+                    subtitle: "สำหรับการเดินทาง 3 ครั้งถัดไป",
                     promoCode: "RIDE25",
                     onTap: () => _applyPromoCode("RIDE25"),
                   ),
@@ -182,7 +228,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                               address: _quickActions[index]["address"]!,
                               iconName: _quickActions[index]["icon"]!,
                               onTap: () => _selectQuickDestination(
-                                  _quickActions[index]["address"]!),
+                                _quickActions[index]["address"]!,
+                              ),
                             );
                           },
                         ),
@@ -261,8 +308,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
               onPressed: _destinationLocation.isNotEmpty ? _requestRide : null,
               isLoading: _isLoading,
               isEnabled: _destinationLocation.isNotEmpty,
-              buttonText:
-                  _scheduledTime != null ? 'Schedule Ride' : 'Request Ride',
+              buttonText: _scheduledTime != null ? 'จองการเดินทาง' : 'เรียกรถ',
             ),
           ),
           CustomBottomBar(
@@ -295,6 +341,246 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSellingPointsBanner(ThemeData theme) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w),
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: 0.1),
+            theme.colorScheme.secondary.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '✨ จุดเด่นของเรา',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          SizedBox(height: 1.5.h),
+          _buildSellingPoint(
+            theme,
+            '🎯',
+            'รถเช่าอุดรไม่ใช้บัตรเครดิต',
+            'เงื่อนไขง่ายที่สุด ไม่ต้องมีบัตรเครดิตก็เช่าได้',
+          ),
+          SizedBox(height: 1.h),
+          _buildSellingPoint(
+            theme,
+            '🚗',
+            'รับ-ส่งฟรีถึงมือ',
+            'ทั้งสนามบินอุดรธานี และในตัวเมือง สะดวกสบาย ไม่ต้องรอนาน',
+          ),
+          SizedBox(height: 1.h),
+          _buildSellingPoint(
+            theme,
+            '✅',
+            'รถใหม่ สะอาด มั่นใจ',
+            'ตรวจเช็คก่อนส่งมอบทุกคัน แอร์เย็นฉ่ำสู้แดดวันหยุด',
+          ),
+          SizedBox(height: 1.h),
+          _buildSellingPoint(
+            theme,
+            '💝',
+            'บริการด้วยใจ',
+            'แอดมินใจดี คุยง่าย พร้อมให้คำแนะนำ',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSellingPoint(
+    ThemeData theme,
+    String emoji,
+    String title,
+    String description,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          emoji,
+          style: TextStyle(fontSize: 20.sp),
+        ),
+        SizedBox(width: 3.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              SizedBox(height: 0.3.h),
+              Text(
+                description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactCard(ThemeData theme) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w),
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CustomIconWidget(
+                iconName: 'phone',
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              SizedBox(width: 2.w),
+              Text(
+                'ติดต่อจองรถ',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 1.5.h),
+          _buildContactRow(theme, 'phone', 'สายด่วน', '086-634-8619'),
+          SizedBox(height: 1.h),
+          _buildContactRow(theme, 'phone', 'สายด่วน 2', '096-363-8519'),
+          SizedBox(height: 1.h),
+          _buildContactRow(theme, 'chat', 'Line ID', '@rungroj'),
+          SizedBox(height: 1.5.h),
+          Divider(height: 1),
+          SizedBox(height: 1.5.h),
+          Row(
+            children: [
+              CustomIconWidget(
+                iconName: 'location_on',
+                color: theme.colorScheme.primary,
+                size: 18,
+              ),
+              SizedBox(width: 2.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'สถานที่รับรถ',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 0.3.h),
+                    Text(
+                      'รถเช่าอุดรธานี รุ่งโรจน์คาร์เร้นท์\n79QPF+QQM Chiang Phin, Mueang Udon Thani\nUdon Thani 41000',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 1.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomIconWidget(
+                  iconName: 'schedule',
+                  color: theme.colorScheme.primary,
+                  size: 16,
+                ),
+                SizedBox(width: 2.w),
+                Text(
+                  'เปิดให้บริการ 24 ชั่วโมง',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactRow(
+    ThemeData theme,
+    String iconName,
+    String label,
+    String value,
+  ) {
+    return Row(
+      children: [
+        CustomIconWidget(
+          iconName: iconName,
+          color: theme.colorScheme.onSurfaceVariant,
+          size: 18,
+        ),
+        SizedBox(width: 2.w),
+        Text(
+          '$label: ',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
@@ -382,7 +668,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
       builder: (context) => AlertDialog(
         title: Text('Need Help?'),
         content: Text(
-            'Contact our support team for assistance with your ride booking.'),
+          'Contact our support team for assistance with your ride booking.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -415,29 +702,43 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     // Provide haptic feedback
     HapticFeedback.mediumImpact();
 
-    // Simulate ride request processing
-    await Future.delayed(const Duration(seconds: 2));
+    // Open Facebook Messenger to Rungroj Car Rental
+    await _openMessenger();
 
     setState(() {
       _isLoading = false;
     });
+  }
 
-    // Navigate to live tracking screen with ride details
-    if (mounted) {
-      Navigator.pushNamed(
-        context,
-        AppRoutes.liveTracking,
-        arguments: {
-          'pickup': _pickupLocation,
-          'destination': _destinationLocation,
-          'vehicleType': _vehicleData[_selectedVehicleIndex]["type"],
-          'estimatedFare': _vehicleData[_selectedVehicleIndex]
-              ["estimatedTotal"],
-          'scheduledTime': _scheduledTime,
-          'specialRequest': _specialRequest,
-          'promoCode': _promoCode,
-        },
-      );
+  Future<void> _openMessenger() async {
+    final messengerUrl = Uri.parse('https://m.me/RungrojCarRental');
+
+    try {
+      if (await canLaunchUrl(messengerUrl)) {
+        await launchUrl(
+          messengerUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'ไม่สามารถเปิด Messenger ได้ กรุณาติดต่อโดยตรงที่ 086-634-8619'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด กรุณาติดต่อที่ 086-634-8619'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -455,7 +756,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Promo code "$code" applied!'),
+        content: Text('โค้ดโปรโมชั่น "$code" ถูกใช้แล้ว!'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
       ),
@@ -509,7 +810,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  'No new notifications',
+                  'ไม่มีการแจ้งเตือนใหม่',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -536,7 +837,6 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
       ),
       child: Column(
         children: [
-          // Handle bar
           Container(
             margin: EdgeInsets.only(top: 2.h),
             width: 12.w,
@@ -547,7 +847,6 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
             ),
           ),
           SizedBox(height: 3.h),
-          // Vehicle details content
           Expanded(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 6.w),
@@ -569,9 +868,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                     ),
                   ),
                   SizedBox(height: 3.h),
-                  // Features list
                   Text(
-                    'Features',
+                    'คุณสมบัติ',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
@@ -622,7 +920,6 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
       ),
       child: Column(
         children: [
-          // Handle bar
           Container(
             margin: EdgeInsets.only(top: 2.h),
             width: 12.w,
@@ -633,7 +930,6 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
             ),
           ),
           SizedBox(height: 3.h),
-          // Fare breakdown content
           Expanded(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 6.w),
@@ -641,7 +937,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Fare Breakdown',
+                    'รายละเอียดค่าโดยสาร',
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.onSurface,

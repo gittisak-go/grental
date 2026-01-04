@@ -24,35 +24,35 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _locationEnabled = true;
   bool _biometricEnabled = false;
 
-  // Mock user data
+  // Mock user data with Thai localization
   final Map<String, dynamic> _userData = {
     "name": "Sarah Johnson",
     "email": "sarah.johnson@email.com",
-    "phone": "+1 (555) 123-4567",
-    "membershipStatus": "Premium Member",
+    "phone": "086 634 8619",
+    "membershipStatus": "สมาชิกพรีเมียม",
     "profileImage": "assets/images/sarah_johnson_profile.png",
     "emergencyContacts": [
       {
         "name": "John Johnson",
         "phone": "+1 (555) 987-6543",
-        "relation": "Spouse"
+        "relation": "คู่สมรส",
       },
       {
         "name": "Emily Johnson",
         "phone": "+1 (555) 456-7890",
-        "relation": "Sister"
-      }
+        "relation": "พี่สาว",
+      },
     ],
     "paymentMethods": [
       {"type": "Visa", "lastFour": "4532", "isDefault": true},
       {"type": "Mastercard", "lastFour": "8901", "isDefault": false},
-      {"type": "American Express", "lastFour": "2345", "isDefault": false}
+      {"type": "American Express", "lastFour": "2345", "isDefault": false},
     ],
     "preferences": {
-      "vehicleType": "Comfort",
+      "vehicleType": "สะดวกสบาย",
       "autoTip": "15%",
-      "pickupInstructions": "Please call when you arrive"
-    }
+      "pickupInstructions": "กรุณาโทรหาเมื่อมาถึง",
+    },
   };
 
   @override
@@ -116,7 +116,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'person',
                   title: 'Edit Profile',
-                  subtitle: 'Update your personal details',
+                  subtitle: 'อัปเดตข้อมูลส่วนตัวของคุณ',
                   onTap: _showEditProfileDialog,
                 ),
                 ProfileMenuItemWidget(
@@ -141,7 +141,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ToggleMenuItemWidget(
                   icon: 'dark_mode',
                   title: 'Dark Mode',
-                  subtitle: 'Switch between light and dark themes',
+                  subtitle: 'เปลี่ยนระหว่างธีมสว่างและมืด',
                   value: _isDarkMode,
                   onChanged: (value) {
                     setState(() => _isDarkMode = value);
@@ -151,7 +151,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ToggleMenuItemWidget(
                   icon: 'notifications',
                   title: 'Push Notifications',
-                  subtitle: 'Receive ride updates and promotions',
+                  subtitle: 'รับการอัปเดตการเดินทางและโปรโมชั่น',
                   value: _notificationsEnabled,
                   onChanged: (value) {
                     setState(() => _notificationsEnabled = value);
@@ -161,7 +161,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ToggleMenuItemWidget(
                   icon: 'location_on',
                   title: 'Location Services',
-                  subtitle: 'Allow location access for better service',
+                  subtitle: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อบริการที่ดีขึ้น',
                   value: _locationEnabled,
                   onChanged: (value) {
                     setState(() => _locationEnabled = value);
@@ -171,7 +171,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'language',
                   title: 'Language',
-                  subtitle: 'English (US)',
+                  subtitle: 'ภาษาไทย',
                   onTap: _showLanguageDialog,
                 ),
               ],
@@ -183,18 +183,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               showDivider: false,
               children: [
                 ...((_userData["paymentMethods"] as List)
-                    .map((card) => PaymentCardWidget(
-                          cardType: card["type"] as String,
-                          lastFourDigits: card["lastFour"] as String,
-                          isDefault: card["isDefault"] as bool,
-                          onTap: () => _showCardDetailsDialog(card),
-                          onDelete: () => _showDeleteCardDialog(card),
-                        ))
+                    .map(
+                      (card) => PaymentCardWidget(
+                        cardType: card["type"] as String,
+                        lastFourDigits: card["lastFour"] as String,
+                        isDefault: card["isDefault"] as bool,
+                        onTap: () => _showCardDetailsDialog(card),
+                        onDelete: () => _showDeleteCardDialog(card),
+                      ),
+                    )
                     .toList()),
                 ProfileMenuItemWidget(
                   icon: 'add',
                   title: 'Add Payment Method',
-                  subtitle: 'Add a new card or payment option',
+                  subtitle: 'เพิ่มบัตรหรือวิธีการชำระเงินใหม่',
                   onTap: _showAddPaymentDialog,
                   iconColor: theme.colorScheme.primary,
                 ),
@@ -208,8 +210,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'directions_car',
                   title: 'Default Vehicle Type',
-                  subtitle: (_userData["preferences"] as Map)["vehicleType"]
-                      as String,
+                  subtitle:
+                      (_userData["preferences"] as Map)["vehicleType"]
+                          as String,
                   onTap: _showVehicleTypeDialog,
                 ),
                 ProfileMenuItemWidget(
@@ -222,8 +225,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'note',
                   title: 'Pickup Instructions',
-                  subtitle: (_userData["preferences"]
-                      as Map)["pickupInstructions"] as String,
+                  subtitle:
+                      (_userData["preferences"] as Map)["pickupInstructions"]
+                          as String,
                   onTap: _showInstructionsDialog,
                 ),
               ],
@@ -237,13 +241,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   icon: 'emergency',
                   title: 'Emergency Contacts',
                   subtitle:
-                      '${(_userData["emergencyContacts"] as List).length} contacts added',
+                      'เพิ่มผู้ติดต่อฉุกเฉิน ${(_userData["emergencyContacts"] as List).length} ราย',
                   onTap: _showEmergencyContactsDialog,
                 ),
                 ToggleMenuItemWidget(
                   icon: 'fingerprint',
                   title: 'Biometric Authentication',
-                  subtitle: 'Use fingerprint or face ID for payments',
+                  subtitle: 'ใช้ลายนิ้วมือหรือ Face ID สำหรับการชำระเงิน',
                   value: _biometricEnabled,
                   onChanged: (value) {
                     setState(() => _biometricEnabled = value);
@@ -253,7 +257,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'security',
                   title: 'Privacy Settings',
-                  subtitle: 'Manage your data and privacy',
+                  subtitle: 'จัดการข้อมูลและความเป็นส่วนตัวของคุณ',
                   onTap: _showPrivacyDialog,
                 ),
               ],
@@ -266,19 +270,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'help',
                   title: 'Help Center',
-                  subtitle: 'Get help and support',
+                  subtitle: 'รับความช่วยเหลือและการสนับสนุน',
                   onTap: _showHelpCenter,
                 ),
                 ProfileMenuItemWidget(
                   icon: 'feedback',
                   title: 'Send Feedback',
-                  subtitle: 'Share your thoughts with us',
+                  subtitle: 'แบ่งปันความคิดเห็นของคุณกับเรา',
                   onTap: _showFeedbackDialog,
                 ),
                 ProfileMenuItemWidget(
                   icon: 'info',
                   title: 'About TaxiHouse',
-                  subtitle: 'Version 1.0.0',
+                  subtitle: 'เวอร์ชัน 1.0.0',
                   onTap: _showAboutDialog,
                 ),
               ],
@@ -291,13 +295,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'lock',
                   title: 'Change Password',
-                  subtitle: 'Update your account password',
+                  subtitle: 'อัปเดตรหัสผ่านบัญชีของคุณ',
                   onTap: _showChangePasswordDialog,
                 ),
                 ProfileMenuItemWidget(
                   icon: 'logout',
                   title: 'Sign Out',
-                  subtitle: 'Sign out of your account',
+                  subtitle: 'ออกจากระบบบัญชีของคุณ',
                   onTap: _showLogoutDialog,
                   iconColor: theme.colorScheme.error,
                   showArrow: false,
@@ -305,7 +309,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ProfileMenuItemWidget(
                   icon: 'delete_forever',
                   title: 'Delete Account',
-                  subtitle: 'Permanently delete your account',
+                  subtitle: 'ลบบัญชีของคุณอย่างถาวร',
                   onTap: _showDeleteAccountDialog,
                   iconColor: theme.colorScheme.error,
                   showArrow: false,
@@ -359,18 +363,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Edit Profile'),
         content: const Text(
-            'Profile editing functionality would be implemented here with form fields for name, email, and photo upload.'),
+          'ฟังก์ชันการแก้ไขโปรไฟล์จะถูกนำมาใช้ที่นี่พร้อมฟอร์มสำหรับชื่อ อีเมล และอัปโหลดรูปภาพ',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Save'),
+            child: const Text('บันทึก'),
           ),
         ],
       ),
@@ -383,18 +388,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Update Phone Number'),
         content: const Text(
-            'Phone number verification would be implemented here with SMS verification.'),
+          'การยืนยันหมายเลขโทรศัพท์จะถูกนำมาใช้ที่นี่ด้วยการยืนยัน SMS',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Update'),
+            child: const Text('อัปเดต'),
           ),
         ],
       ),
@@ -407,18 +413,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Update Email Address'),
         content: const Text(
-            'Email update functionality would be implemented here with email verification.'),
+          'ฟังก์ชันการอัปเดตอีเมลจะถูกนำมาใช้ที่นี่ด้วยการยืนยันอีเมล',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Update'),
+            child: const Text('อัปเดต'),
           ),
         ],
       ),
@@ -434,12 +441,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('English (US)'),
+              title: const Text('ภาษาไทย'),
               leading: Radio(value: true, groupValue: true, onChanged: null),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              title: const Text('Spanish'),
+              title: const Text('English (US)'),
               leading: Radio(value: false, groupValue: true, onChanged: null),
               onTap: () => Navigator.pop(context),
             ),
@@ -448,7 +455,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
         ],
       ),
@@ -459,13 +466,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${card["type"]} Details'),
+        title: Text('${card["type"]} รายละเอียด'),
         content: Text(
-            'Card ending in ${card["lastFour"]}\n\nCard management features would be implemented here.'),
+          'บัตรที่ลงท้ายด้วย ${card["lastFour"]}\n\nคุณสมบัติการจัดการบัตรจะถูกนำมาใช้ที่นี่',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('ปิด'),
           ),
           if (!(card["isDefault"] as bool))
             ElevatedButton(
@@ -473,7 +481,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 Navigator.pop(context);
                 HapticFeedback.lightImpact();
               },
-              child: const Text('Set as Default'),
+              child: const Text('ตั้งเป็นค่าเริ่มต้น'),
             ),
         ],
       ),
@@ -486,11 +494,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Payment Method'),
         content: Text(
-            'Are you sure you want to remove your ${card["type"]} ending in ${card["lastFour"]}?'),
+          'คุณแน่ใจหรือไม่ว่าต้องการลบ ${card["type"]} ที่ลงท้ายด้วย ${card["lastFour"]}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -500,7 +509,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: const Text('ลบ'),
           ),
         ],
       ),
@@ -513,18 +522,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Add Payment Method'),
         content: const Text(
-            'Payment method addition would be implemented here with secure card input forms.'),
+          'การเพิ่มวิธีการชำระเงินจะถูกนำมาใช้ที่นี่ด้วยฟอร์มการป้อนบัตรที่ปลอดภัย',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Add Card'),
+            child: const Text('เพิ่มบัตร'),
           ),
         ],
       ),
@@ -540,33 +550,42 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('Economy'),
+              title: const Text('ประหยัด'),
               leading: Radio(
-                  value: 'Economy', groupValue: 'Comfort', onChanged: null),
+                value: 'ประหยัด',
+                groupValue: 'สะดวกสบาย',
+                onChanged: null,
+              ),
             ),
             ListTile(
-              title: const Text('Comfort'),
+              title: const Text('สะดวกสบาย'),
               leading: Radio(
-                  value: 'Comfort', groupValue: 'Comfort', onChanged: null),
+                value: 'สะดวกสบาย',
+                groupValue: 'สะดวกสบาย',
+                onChanged: null,
+              ),
             ),
             ListTile(
-              title: const Text('Premium'),
+              title: const Text('พรีเมียม'),
               leading: Radio(
-                  value: 'Premium', groupValue: 'Comfort', onChanged: null),
+                value: 'พรีเมียม',
+                groupValue: 'สะดวกสบาย',
+                onChanged: null,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Save'),
+            child: const Text('บันทึก'),
           ),
         ],
       ),
@@ -594,23 +613,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               leading: Radio(value: '20%', groupValue: '15%', onChanged: null),
             ),
             ListTile(
-              title: const Text('Custom'),
-              leading:
-                  Radio(value: 'Custom', groupValue: '15%', onChanged: null),
+              title: const Text('กำหนดเอง'),
+              leading: Radio(
+                value: 'กำหนดเอง',
+                groupValue: '15%',
+                onChanged: null,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Save'),
+            child: const Text('บันทึก'),
           ),
         ],
       ),
@@ -625,21 +647,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         content: const TextField(
           maxLines: 3,
           decoration: InputDecoration(
-            hintText: 'Enter special pickup instructions...',
+            hintText: 'ป้อนคำแนะนำพิเศษสำหรับการรับ...',
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Save'),
+            child: const Text('บันทึก'),
           ),
         ],
       ),
@@ -676,14 +698,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('ปิด'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Add Contact'),
+            child: const Text('เพิ่มผู้ติดต่อ'),
           ),
         ],
       ),
@@ -696,11 +718,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Privacy Settings'),
         content: const Text(
-            'Privacy and data management settings would be implemented here.'),
+          'การตั้งค่าความเป็นส่วนตัวและการจัดการข้อมูลจะถูกนำมาใช้ที่นี่',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('ปิด'),
           ),
         ],
       ),
@@ -713,11 +736,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Help Center'),
         content: const Text(
-            'Help center with FAQ, contact support, and troubleshooting guides would be implemented here.'),
+          'ศูนย์ช่วยเหลือพร้อม FAQ ติดต่อฝ่ายสนับสนุน และคู่มือการแก้ไขปัญหาจะถูกนำมาใช้ที่นี่',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('ปิด'),
           ),
         ],
       ),
@@ -732,21 +756,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         content: const TextField(
           maxLines: 4,
           decoration: InputDecoration(
-            hintText: 'Share your thoughts and suggestions...',
+            hintText: 'แบ่งปันความคิดและข้อเสนอแนะของคุณ...',
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Send'),
+            child: const Text('ส่ง'),
           ),
         ],
       ),
@@ -759,11 +783,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('About TaxiHouse'),
         content: const Text(
-            'TaxiHouse v1.0.0\n\nPremium taxi booking experience with cinematic design.\n\n© 2024 TaxiHouse. All rights reserved.'),
+          'TaxiHouse v1.0.0\n\nประสบการณ์การจองรถแท็กซี่พรีเมียมด้วยการออกแบบแบบภาพยนตร์\n\n© 2024 TaxiHouse สงวนลิขสิทธิ์',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('ปิด'),
           ),
         ],
       ),
@@ -781,7 +806,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             TextField(
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'Current Password',
+                labelText: 'รหัสผ่านปัจจุบัน',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -789,7 +814,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             TextField(
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'New Password',
+                labelText: 'รหัสผ่านใหม่',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -797,7 +822,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             TextField(
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'Confirm New Password',
+                labelText: 'ยืนยันรหัสผ่านใหม่',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -806,14 +831,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               HapticFeedback.lightImpact();
             },
-            child: const Text('Update'),
+            child: const Text('อัปเดต'),
           ),
         ],
       ),
@@ -825,12 +850,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content:
-            const Text('Are you sure you want to sign out of your account?'),
+        content: const Text('คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบบัญชีของคุณ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -845,7 +869,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Sign Out'),
+            child: const Text('ออกจากระบบ'),
           ),
         ],
       ),
@@ -858,11 +882,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Account'),
         content: const Text(
-            'Are you sure you want to permanently delete your account? This action cannot be undone.'),
+          'คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีของคุณอย่างถาวร? การดำเนินการนี้ไม่สามารถยกเลิกได้',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -872,7 +897,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Delete Account'),
+            child: const Text('ลบบัญชี'),
           ),
         ],
       ),

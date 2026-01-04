@@ -41,13 +41,13 @@ class _PaymentScreenState extends State<PaymentScreen>
   // Mock data for fare breakdown
   Map<String, dynamic> fareDetails = {
     'breakdown': [
-      {'label': 'Base Fare', 'amount': '\$8.50', 'isTotal': false},
-      {'label': 'Time Charges', 'amount': '\$4.20', 'isTotal': false},
-      {'label': 'Distance Charges', 'amount': '\$6.80', 'isTotal': false},
-      {'label': 'Service Fee', 'amount': '\$2.50', 'isTotal': false},
+      {'label': 'ค่าเช่าพื้นฐาน', 'amount': '฿170', 'isTotal': false},
+      {'label': 'ค่าเวลา', 'amount': '฿84', 'isTotal': false},
+      {'label': 'ค่าระยะทาง', 'amount': '฿136', 'isTotal': false},
+      {'label': 'ค่าบริการ', 'amount': '฿50', 'isTotal': false},
     ],
-    'subtotal': '\$22.00',
-    'total': '\$22.00',
+    'subtotal': '฿440',
+    'total': '฿440',
     'discount': null,
   };
 
@@ -170,7 +170,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                           appliedPromoCode = promoCode;
                           discountAmount = discount;
                           fareDetails['discount'] =
-                              '\$${discount.toStringAsFixed(2)}';
+                              '฿${discount.toStringAsFixed(2)}';
                         });
                         _updateTotalAmount();
                       },
@@ -274,7 +274,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                   ),
                 ),
                 Text(
-                  '\$${totalAmount.toStringAsFixed(2)}',
+                  '฿${totalAmount.toStringAsFixed(2)}',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.primary,
@@ -327,7 +327,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                           ),
                           SizedBox(width: 2.w),
                           Text(
-                            'Pay \$${totalAmount.toStringAsFixed(2)}',
+                            'จ่ายเงิน ฿${totalAmount.toStringAsFixed(2)}',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onPrimary,
@@ -358,7 +358,7 @@ class _PaymentScreenState extends State<PaymentScreen>
   }
 
   double _calculateTotalAmount() {
-    double baseAmount = 22.00; // Base fare from fareDetails
+    double baseAmount = 440.00; // Base fare from fareDetails
     double total = baseAmount + tipAmount - discountAmount;
     return total > 0 ? total : 0;
   }
@@ -366,7 +366,7 @@ class _PaymentScreenState extends State<PaymentScreen>
   void _updateTotalAmount() {
     final total = _calculateTotalAmount();
     setState(() {
-      fareDetails['total'] = '\$${total.toStringAsFixed(2)}';
+      fareDetails['total'] = '฿${total.toStringAsFixed(2)}';
     });
   }
 

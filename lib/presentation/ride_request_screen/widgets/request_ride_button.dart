@@ -134,7 +134,7 @@ class _RequestRideButtonState extends State<RequestRideButton>
         mainAxisSize: MainAxisSize.min,
         children: [
           CustomIconWidget(
-            iconName: 'local_taxi',
+            iconName: 'chat',
             color: widget.isEnabled
                 ? theme.colorScheme.onPrimary
                 : theme.colorScheme.onSurfaceVariant,
@@ -184,7 +184,7 @@ class _RequestRideButtonState extends State<RequestRideButton>
           ),
           SizedBox(width: screenWidth * 0.04),
           Text(
-            'Finding your ride...',
+            'กำลังเปิด Messenger...',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onPrimary,
