@@ -62,10 +62,16 @@ class CustomBottomBar extends StatelessWidget {
       route: '/ride-request-screen',
     ),
     BottomNavItem(
-      icon: Icons.location_on_outlined,
-      activeIcon: Icons.location_on_rounded,
-      label: 'Track',
-      route: '/live-tracking-screen',
+      icon: Icons.calendar_today_outlined,
+      activeIcon: Icons.calendar_today_rounded,
+      label: 'Bookings',
+      route: '/admin-reservations-screen',
+    ),
+    BottomNavItem(
+      icon: Icons.directions_car_outlined,
+      activeIcon: Icons.directions_car_rounded,
+      label: 'Fleet',
+      route: '/fleet-inventory-screen',
     ),
     BottomNavItem(
       icon: Icons.person_outline_rounded,

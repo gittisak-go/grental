@@ -275,27 +275,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
             currentIndex: 0,
             onTap: (index) {
               HapticFeedback.lightImpact();
-              switch (index) {
-                case 0:
-                  break;
-                case 1:
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/admin-reservations-screen',
-                    (route) => false,
-                  );
-                  break;
-                case 2:
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/fleet-inventory-screen',
-                    (route) => false,
-                  );
-                  break;
-                case 3:
-                  Navigator.pushNamed(context, '/user-profile-screen');
-                  break;
-              }
+              // Navigation is handled by CustomBottomBar's _handleTap method
+              // Remove custom navigation logic to prevent conflicts
             },
           ),
         ],
@@ -730,6 +711,46 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 1.5.h),
+          // Google Maps Navigation Button
+          InkWell(
+            onTap: () => _openGoogleMaps(),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CustomIconWidget(
+                    iconName: 'map',
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                  SizedBox(width: 2.w),
+                  Text(
+                    'เปิดใน Google Maps',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 2.w),
+                  Icon(
+                    Icons.open_in_new,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+            ),
           ),
           SizedBox(height: 1.h),
           Container(
@@ -1282,6 +1303,55 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('ไม่สามารถเปิดลิงก์ได้ กรุณาลองใหม่อีกครั้ง'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openGoogleMaps() async {
+    // Coordinates for Udon Thani International Airport / Rungroj Car Rental
+    // 79QPF+QQM corresponds to approximately 17.386, 102.774
+    const double latitude = 17.386;
+    const double longitude = 102.774;
+    const String placeName = 'รถเช่าอุดรธานี รุ่งโรจน์คาร์เร้นท์';
+
+    // Try Google Maps app first, then fallback to web
+    final googleMapsAppUrl = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude&query_place_id=ChIJYTN9FjlJTDERwAWjmGLggDw');
+
+    final googleMapsWebUrl = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&destination_place_id=ChIJYTN9FjlJTDERwAWjmGLggDw');
+
+    try {
+      // Try to launch Google Maps
+      if (await canLaunchUrl(googleMapsAppUrl)) {
+        await launchUrl(
+          googleMapsAppUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else if (await canLaunchUrl(googleMapsWebUrl)) {
+        await launchUrl(
+          googleMapsWebUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'ไม่สามารถเปิด Google Maps ได้ กรุณาติดต่อ 086-634-8619'),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
