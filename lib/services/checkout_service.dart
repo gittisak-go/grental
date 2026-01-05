@@ -123,6 +123,60 @@ class CheckoutService {
     }
   }
 
+  // Upload payment receipt
+  Future<void> uploadPaymentReceipt({
+    required String transactionId,
+    required String receiptUrl,
+  }) async {
+    try {
+      await _client.rpc('update_payment_receipt', params: {
+        'transaction_uuid': transactionId,
+        'receipt_image_url': receiptUrl,
+      });
+    } catch (error) {
+      throw Exception('ไม่สามารถอัปโหลดสลิปการชำระเงินได้: $error');
+    }
+  }
+
+  // Subscribe to payment status changes for real-time updates
+  RealtimeChannel subscribeToPaymentStatus({
+    required String transactionId,
+    required Function(Map<String, dynamic>) onStatusChange,
+  }) {
+    return _client
+        .channel('payment-status-$transactionId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'payment_transactions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: transactionId,
+          ),
+          callback: (payload) {
+            onStatusChange(payload.newRecord);
+          },
+        )
+        .subscribe();
+  }
+
+  // Get payment transaction by ID with real-time updates
+  Future<Map<String, dynamic>> getPaymentTransaction(
+      String transactionId) async {
+    try {
+      final response = await _client
+          .from('payment_transactions')
+          .select()
+          .eq('id', transactionId)
+          .single();
+
+      return response;
+    } catch (error) {
+      throw Exception('ไม่สามารถดึงข้อมูลการชำระเงินได้: $error');
+    }
+  }
+
   // Cancel reservation
   Future<void> cancelReservation(String reservationId) async {
     try {

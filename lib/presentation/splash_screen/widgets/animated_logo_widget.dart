@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../theme/app_theme.dart';
 
 /// Animated logo widget with cinematic scale and fade effects
 class AnimatedLogoWidget extends StatefulWidget {
@@ -85,10 +86,10 @@ class _AnimatedLogoWidgetState extends State<AnimatedLogoWidget>
           child: Opacity(
             opacity: _fadeAnimation.value,
             child: Container(
-              width: 25.w,
-              height: 25.w,
+              width: 40.w,
+              height: 40.w,
               decoration: BoxDecoration(
-                color: AppTheme.lightTheme.colorScheme.primary,
+                color: AppTheme.lightTheme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(4.w),
                 boxShadow: [
                   BoxShadow(
@@ -99,27 +100,15 @@ class _AnimatedLogoWidgetState extends State<AnimatedLogoWidget>
                   ),
                 ],
               ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomIconWidget(
-                      iconName: 'local_taxi',
-                      color: AppTheme.lightTheme.colorScheme.onPrimary,
-                      size: 8.w,
-                    ),
-                    SizedBox(height: 1.h),
-                    Text(
-                      'RungrojCarRental',
-                      style:
-                          AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
-                        color: AppTheme.lightTheme.colorScheme.onPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12.sp,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4.w),
+                child: Padding(
+                  padding: EdgeInsets.all(3.w),
+                  child: Image.asset(
+                    'assets/images/Rungroj_Car_Rental-logo-1767574577173.png',
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Rungroj Car Rental logo',
+                  ),
                 ),
               ),
             ),

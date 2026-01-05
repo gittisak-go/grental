@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
-import '../../../widgets/custom_icon_widget.dart';
 
 /// Elegant app logo widget with boutique design aesthetics
 class AppLogoWidget extends StatelessWidget {
@@ -14,17 +12,13 @@ class AppLogoWidget extends StatelessWidget {
 
     return Column(
       children: [
-        // Logo container with soft yellow accent
+        // Logo container with soft accent
         Container(
-          width: 20.w,
-          height: 20.w,
+          width: 35.w,
+          height: 35.w,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: theme.colorScheme.primary.withValues(alpha: 0.2),
-              width: 1,
-            ),
             boxShadow: [
               BoxShadow(
                 color: theme.colorScheme.primary.withValues(alpha: 0.1),
@@ -33,11 +27,12 @@ class AppLogoWidget extends StatelessWidget {
               ),
             ],
           ),
-          child: Center(
-            child: CustomIconWidget(
-              iconName: 'local_taxi',
-              color: theme.colorScheme.primary,
-              size: 10.w,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/images/Rungroj_Car_Rental-logo-1767574577173.png',
+              fit: BoxFit.contain,
+              semanticLabel: 'Rungroj Car Rental logo',
             ),
           ),
         ),
