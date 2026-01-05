@@ -6,7 +6,10 @@ class AuthService {
 
   // Sign up with email and password
   Future<AuthResponse> signUp(
-      String email, String password, Map<String, dynamic> userData) async {
+    String email,
+    String password,
+    Map<String, dynamic> userData,
+  ) async {
     try {
       final response = await _client.auth.signUp(
         email: email,
@@ -69,11 +72,22 @@ class AuthService {
 
   // Update user profile
   Future<void> updateUserProfile(
-      String userId, Map<String, dynamic> updates) async {
+    String userId,
+    Map<String, dynamic> updates,
+  ) async {
     try {
       await _client.from('user_profiles').update(updates).eq('id', userId);
     } catch (error) {
       throw Exception('ไม่สามารถอัปเดตโปรไฟล์ได้: $error');
+    }
+  }
+
+  // Reset password for email
+  Future<void> resetPasswordForEmail(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(email);
+    } catch (error) {
+      throw Exception('ไม่สามารถส่งอีเมลรีเซ็ตรหัสผ่านได้: $error');
     }
   }
 }

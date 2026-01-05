@@ -5,6 +5,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../theme/app_theme.dart';
+import '../../services/auth_service.dart';
 import './widgets/app_logo_widget.dart';
 import './widgets/biometric_login_widget.dart';
 import './widgets/login_form_widget.dart';
@@ -24,6 +25,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
+  final AuthService _authService = AuthService();
 
   bool _isLoading = false;
   bool _keyboardVisible = false;
@@ -32,13 +34,6 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   late AnimationController _slideAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  // Mock credentials for testing
-  final Map<String, String> _mockCredentials = {
-    'admin@taxihouse.com': 'admin123',
-    'user@taxihouse.com': 'user123',
-    'driver@taxihouse.com': 'driver123',
-  };
 
   @override
   void initState() {
@@ -58,21 +53,20 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fadeAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _slideAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     // Start animations
     _fadeAnimationController.forward();
@@ -102,6 +96,15 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   Future<void> _handleLogin() async {
     if (_isLoading) return;
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Validate inputs
+    if (email.isEmpty || password.isEmpty) {
+      _showErrorMessage('กรุณากรอกอีเมลและรหัสผ่าน');
+      return;
+    }
+
     // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
@@ -113,45 +116,33 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     HapticFeedback.lightImpact();
 
     try {
-      // Simulate authentication delay
-      await Future.delayed(const Duration(milliseconds: 1500));
+      // Real Supabase authentication
+      final response = await _authService.signIn(email, password);
 
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-
-      // Check mock credentials
-      if (_mockCredentials.containsKey(email) &&
-          _mockCredentials[email] == password) {
+      if (response.user != null) {
         // Success haptic feedback
         HapticFeedback.mediumImpact();
 
         // Show success toast
         Fluttertoast.showToast(
-          msg: "Login successful! Welcome to RungrojCarRental",
+          msg: "เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับสู่ Rungroj Car Rental",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: AppTheme.lightTheme.colorScheme.primary,
           textColor: AppTheme.lightTheme.colorScheme.onPrimary,
         );
 
-        // Navigate to location detection screen
+        // Navigate to ride request screen
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/location-detection-screen');
+          Navigator.pushReplacementNamed(context, '/ride-request-screen');
         }
-      } else {
-        // Error haptic feedback
-        HapticFeedback.heavyImpact();
-
-        // Show error message
-        _showErrorMessage('Invalid email or password. Please try again.');
       }
     } catch (e) {
       // Error haptic feedback
       HapticFeedback.heavyImpact();
 
-      // Show generic error message
-      _showErrorMessage(
-          'Login failed. Please check your connection and try again.');
+      // Show error message
+      _showErrorMessage('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
     } finally {
       if (mounted) {
         setState(() {
@@ -180,7 +171,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
       // Show success toast
       Fluttertoast.showToast(
-        msg: "Biometric authentication successful!",
+        msg: "ยืนยันตัวตนด้วยไบโอเมตริกซ์สำเร็จ!",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         backgroundColor: AppTheme.lightTheme.colorScheme.primary,
@@ -196,7 +187,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
       HapticFeedback.heavyImpact();
 
       // Show error message
-      _showErrorMessage('Biometric authentication failed. Please try again.');
+      _showErrorMessage('ยืนยันตัวตนด้วยไบโอเมตริกซ์ล้มเหลว กรุณาลองอีกครั้ง');
     } finally {
       if (mounted) {
         setState(() {
@@ -206,16 +197,34 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     }
   }
 
-  void _handleForgotPassword() {
+  Future<void> _handleForgotPassword() async {
     HapticFeedback.selectionClick();
 
-    Fluttertoast.showToast(
-      msg: "Password reset link sent to your email",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: AppTheme.lightTheme.colorScheme.primary,
-      textColor: AppTheme.lightTheme.colorScheme.onPrimary,
-    );
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _showErrorMessage('กรุณาใส่อีเมลเพื่อรีเซ็ตรหัสผ่าน');
+      return;
+    }
+
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showErrorMessage('กรุณาใส่อีเมลที่ถูกต้อง');
+      return;
+    }
+
+    try {
+      await _authService.resetPasswordForEmail(email);
+
+      Fluttertoast.showToast(
+        msg: "ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+        textColor: AppTheme.lightTheme.colorScheme.onPrimary,
+      );
+    } catch (e) {
+      _showErrorMessage('ไม่สามารถส่งลิงก์รีเซ็ตรหัสผ่านได้ กรุณาลองอีกครั้ง');
+    }
   }
 
   void _showErrorMessage(String message) {
