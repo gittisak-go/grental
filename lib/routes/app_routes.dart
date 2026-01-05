@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../presentation/admin_dashboard_screen/admin_dashboard_screen.dart';
 import '../presentation/admin_reservations_screen/admin_reservations_screen.dart';
+import '../presentation/about_app_screen/about_app_screen.dart';
 import '../presentation/authentication_screen/authentication_screen.dart';
 import '../presentation/bank_info_screen/bank_info_screen.dart';
 import '../presentation/checkout_screen/checkout_screen.dart';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const String fleetInventoryScreen = '/fleet-inventory-screen';
   static const String checkoutScreen = '/checkout-screen';
   static const String rentalStatusScreen = '/rental-status-screen';
+  static const String aboutAppScreen = '/about-app-screen';
 
   static Map<String, WidgetBuilder> get routes => {
         initial: (context) => const RideRequestScreen(),
@@ -58,6 +60,7 @@ class AppRoutes {
         fleetInventoryScreen: (context) => const FleetInventoryScreen(),
         checkoutScreen: (context) => const CheckoutScreen(),
         rentalStatusScreen: (context) => const RentalStatusScreen(),
+        aboutAppScreen: (context) => const AboutAppScreen(),
         // TODO: Add your other routes here
       };
 }

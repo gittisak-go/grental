@@ -146,4 +146,74 @@ class FleetService {
       throw Exception('Failed to fetch upcoming maintenance: $e');
     }
   }
+
+  /// Filters vehicles by price range
+  Future<List<FleetVehicleModel>> filterByPriceRange(
+    List<String> vehicleIds,
+    double? minPrice,
+    double? maxPrice,
+  ) async {
+    try {
+      var query = _supabaseService.client.from('vehicles').select();
+
+      // Filter by vehicle IDs
+      if (vehicleIds.isNotEmpty) {
+        query = query.inFilter('id', vehicleIds);
+      }
+
+      // Apply price range filter
+      if (minPrice != null) {
+        query = query.gte('price_per_day', minPrice);
+      }
+      if (maxPrice != null) {
+        query = query.lte('price_per_day', maxPrice);
+      }
+
+      final response = await query;
+      return (response as List)
+          .map((vehicle) => FleetVehicleModel.fromJson(vehicle))
+          .toList();
+    } catch (e) {
+      throw Exception('Error filtering by price range: $e');
+    }
+  }
+
+  /// Checks vehicle availability for a specific date range
+  /// Returns list of available vehicle IDs
+  Future<List<String>> checkAvailability(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      // Get all vehicles
+      final allVehiclesResponse = await _supabaseService.client
+          .from('vehicles')
+          .select('id')
+          .eq('status', 'available');
+
+      final allVehicleIds =
+          (allVehiclesResponse as List).map((v) => v['id'] as String).toList();
+
+      // Get vehicles that have conflicting reservations
+      final conflictingReservationsResponse = await _supabaseService.client
+          .from('reservations')
+          .select('vehicle_id')
+          .inFilter('status', [
+        'pending',
+        'confirmed',
+        'active'
+      ]).or('start_date.lte.${endDate.toIso8601String()},end_date.gte.${startDate.toIso8601String()}');
+
+      final conflictingVehicleIds = (conflictingReservationsResponse as List)
+          .map((r) => r['vehicle_id'] as String)
+          .toSet();
+
+      // Return vehicles that don't have conflicts
+      return allVehicleIds
+          .where((id) => !conflictingVehicleIds.contains(id))
+          .toList();
+    } catch (e) {
+      throw Exception('Error checking availability: $e');
+    }
+  }
 }

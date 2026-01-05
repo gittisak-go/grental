@@ -18,6 +18,7 @@ class FleetVehicleModel {
   final String transmission;
   final int seats;
   final String fuelType;
+  final double pricePerDay;
 
   FleetVehicleModel({
     required this.id,
@@ -39,6 +40,7 @@ class FleetVehicleModel {
     required this.transmission,
     required this.seats,
     required this.fuelType,
+    required this.pricePerDay,
   });
 
   factory FleetVehicleModel.fromJson(Map<String, dynamic> json) {
@@ -68,6 +70,7 @@ class FleetVehicleModel {
       transmission: json['transmission'] as String,
       seats: json['seats'] as int,
       fuelType: json['fuel_type'] as String,
+      pricePerDay: (json['price_per_day'] as num?)?.toDouble() ?? 0.0,
     );
   }
 

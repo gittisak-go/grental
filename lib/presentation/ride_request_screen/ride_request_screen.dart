@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
+import './widgets/ai_chatbot_widget.dart';
 import './widgets/fare_estimation_widget.dart';
 import './widgets/promo_banner_widget.dart';
 import './widgets/request_ride_button.dart';
@@ -198,6 +199,8 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           ],
         ),
       ),
+      floatingActionButton: const AIChatbotWidget(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

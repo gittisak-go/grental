@@ -776,21 +776,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('About RungrojCarRental'),
-        content: const Text(
-          'RungrojCarRental v1.0.0\n\nประสบการณ์การจองรถแท็กซี่พรีเมียมด้วยการออกแบบแบบภาพยนตร์\n\n© 2024 RungrojCarRental สงวนลิขสิทธิ์',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ปิด'),
-          ),
-        ],
-      ),
-    );
+    Navigator.pushNamed(context, '/about-app-screen');
   }
 
   void _showChangePasswordDialog() {
