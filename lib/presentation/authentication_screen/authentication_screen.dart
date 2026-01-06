@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import './widgets/app_logo_widget.dart';
 import './widgets/biometric_login_widget.dart';
 import './widgets/login_form_widget.dart';
+import './widgets/social_auth_buttons_widget.dart';
 
 /// Premium authentication screen with cinematic user experience
 /// Implements secure login with biometric integration and elegant animations
@@ -143,6 +144,127 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
 
       // Show error message
       _showErrorMessage('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    HapticFeedback.lightImpact();
+
+    try {
+      final response = await _authService.signInWithGoogle();
+
+      if (response?.user != null) {
+        HapticFeedback.mediumImpact();
+
+        Fluttertoast.showToast(
+          msg:
+              "เข้าสู่ระบบด้วย Google สำเร็จ! ยินดีต้อนรับสู่ Rungroj Car Rental",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+          textColor: AppTheme.lightTheme.colorScheme.onPrimary,
+        );
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/ride-request-screen');
+        }
+      }
+    } catch (e) {
+      HapticFeedback.heavyImpact();
+      _showErrorMessage('ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองอีกครั้ง');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    HapticFeedback.lightImpact();
+
+    try {
+      final response = await _authService.signInWithFacebook();
+
+      if (response.user != null) {
+        HapticFeedback.mediumImpact();
+
+        Fluttertoast.showToast(
+          msg:
+              "เข้าสู่ระบบด้วย Facebook สำเร็จ! ยินดีต้อนรับสู่ Rungroj Car Rental",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+          textColor: AppTheme.lightTheme.colorScheme.onPrimary,
+        );
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/ride-request-screen');
+        }
+      }
+    } catch (e) {
+      HapticFeedback.heavyImpact();
+      _showErrorMessage(
+          'ไม่สามารถเข้าสู่ระบบด้วย Facebook ได้ กรุณาลองอีกครั้ง');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    HapticFeedback.lightImpact();
+
+    try {
+      final response = await _authService.signInWithApple();
+
+      if (response.user != null) {
+        HapticFeedback.mediumImpact();
+
+        Fluttertoast.showToast(
+          msg:
+              "เข้าสู่ระบบด้วย Apple สำเร็จ! ยินดีต้อนรับสู่ Rungroj Car Rental",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+          textColor: AppTheme.lightTheme.colorScheme.onPrimary,
+        );
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/ride-request-screen');
+        }
+      }
+    } catch (e) {
+      HapticFeedback.heavyImpact();
+      _showErrorMessage('ไม่สามารถเข้าสู่ระบบด้วย Apple ได้ กรุณาลองอีกครั้ง');
     } finally {
       if (mounted) {
         setState(() {
@@ -316,7 +438,22 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                               isLoading: _isLoading,
                             ),
 
-                            SizedBox(height: 4.h),
+                            SizedBox(height: 3.h),
+
+                            // Social authentication buttons
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: keyboardHeight > 0
+                                  ? const SizedBox.shrink()
+                                  : SocialAuthButtonsWidget(
+                                      onGooglePressed: _handleGoogleSignIn,
+                                      onFacebookPressed: _handleFacebookSignIn,
+                                      onApplePressed: _handleAppleSignIn,
+                                    ),
+                            ),
+
+                            SizedBox(height: 3.h),
 
                             // Biometric login (hidden when keyboard is visible)
                             AnimatedContainer(
