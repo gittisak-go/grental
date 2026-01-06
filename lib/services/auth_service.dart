@@ -1,12 +1,21 @@
-import './supabase_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import './auth_service_web_stub.dart';
+import './supabase_service.dart';
+
+// Conditional import for Google Sign In (not available on web)
+import 'package:google_sign_in/google_sign_in.dart'
+    if (dart.library.html) 'auth_service_web_stub.dart';
 
 class AuthService {
   final SupabaseClient _client = SupabaseService.instance.client;
+
+  // Store Google Web Client ID as a constant
+  static const String _googleWebClientId =
+      String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: '');
 
   // Sign up with email and password
   Future<AuthResponse> signUp(
@@ -54,15 +63,17 @@ class AuthService {
   // Sign in with Google (Native Platforms)
   Future<AuthResponse> signInWithGoogleNative() async {
     try {
-      const webClientId =
-          String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: '');
-
-      if (webClientId.isEmpty) {
+      if (_googleWebClientId.isEmpty) {
         throw Exception('GOOGLE_WEB_CLIENT_ID ไม่ได้ตั้งค่า');
       }
 
+      // Only available on mobile platforms
+      if (kIsWeb) {
+        throw Exception('ใช้ signInWithGoogleWeb สำหรับ Web');
+      }
+
       final googleSignIn = GoogleSignIn(
-        serverClientId: webClientId,
+        serverClientId: _googleWebClientId,
       );
 
       GoogleSignInAccount? user = await googleSignIn.signInSilently();
@@ -168,11 +179,13 @@ class AuthService {
   Future<void> signOut() async {
     try {
       if (!kIsWeb) {
-        final googleSignIn = GoogleSignIn(
-          serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: ''),
-        );
-        if (await googleSignIn.isSignedIn()) {
-          await googleSignIn.signOut();
+        if (_googleWebClientId.isNotEmpty) {
+          final googleSignIn = GoogleSignIn(
+            serverClientId: _googleWebClientId,
+          );
+          if (await googleSignIn.isSignedIn()) {
+            await googleSignIn.signOut();
+          }
         }
 
         if (await FacebookAuth.instance.accessToken != null) {

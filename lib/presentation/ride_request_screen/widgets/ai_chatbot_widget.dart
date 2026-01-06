@@ -129,9 +129,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget>
 
       await for (final chunk in _aiClient.streamContentOnly(
         messages: messages,
-        model: 'gpt-5-mini',
-        reasoningEffort: 'minimal',
-        verbosity: 'medium',
+        model: 'gpt-3.5-turbo',
       )) {
         responseBuffer.write(chunk);
 

@@ -18,6 +18,7 @@ import '../presentation/ride_request_screen/ride_request_screen.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/user_profile_screen/user_profile_screen.dart';
 import '../presentation/vehicle_management_screen/vehicle_management_screen.dart';
+import '../presentation/notification_preferences_screen/notification_preferences_screen.dart';
 
 class AppRoutes {
   // TODO: Add your routes here
@@ -40,27 +41,31 @@ class AppRoutes {
   static const String checkoutScreen = '/checkout-screen';
   static const String rentalStatusScreen = '/rental-status-screen';
   static const String aboutAppScreen = '/about-app-screen';
+  static const String notificationPreferencesScreen =
+      '/notification-preferences-screen';
 
   static Map<String, WidgetBuilder> get routes => {
-        initial: (context) => const RideRequestScreen(),
-        rideRequest: (context) => const RideRequestScreen(),
-        liveTracking: (context) => const LiveTrackingScreen(),
-        splash: (context) => const SplashScreen(),
-        payment: (context) => const PaymentScreen(),
-        userProfile: (context) => const UserProfileScreen(),
-        driverProfile: (context) => const DriverProfileScreen(),
-        authentication: (context) => const AuthenticationScreen(),
-        rideHistory: (context) => const RideHistoryScreen(),
-        locationDetection: (context) => const LocationDetectionScreen(),
-        vehicleManagement: (context) => const VehicleManagementScreen(),
-        adminReservations: (context) => const AdminReservationsScreen(),
-        bankInfoScreen: (context) => const BankInfoScreen(),
-        adminDashboardScreen: (context) => const AdminDashboardScreen(),
-        driverManagementScreen: (context) => const DriverManagementScreen(),
-        fleetInventoryScreen: (context) => const FleetInventoryScreen(),
-        checkoutScreen: (context) => const CheckoutScreen(),
-        rentalStatusScreen: (context) => const RentalStatusScreen(),
-        aboutAppScreen: (context) => const AboutAppScreen(),
-        // TODO: Add your other routes here
-      };
+    initial: (context) => const RideRequestScreen(),
+    rideRequest: (context) => const RideRequestScreen(),
+    liveTracking: (context) => const LiveTrackingScreen(),
+    splash: (context) => const SplashScreen(),
+    payment: (context) => const PaymentScreen(),
+    userProfile: (context) => const UserProfileScreen(),
+    driverProfile: (context) => const DriverProfileScreen(),
+    authentication: (context) => const AuthenticationScreen(),
+    rideHistory: (context) => const RideHistoryScreen(),
+    locationDetection: (context) => const LocationDetectionScreen(),
+    vehicleManagement: (context) => const VehicleManagementScreen(),
+    adminReservations: (context) => const AdminReservationsScreen(),
+    bankInfoScreen: (context) => const BankInfoScreen(),
+    adminDashboardScreen: (context) => const AdminDashboardScreen(),
+    driverManagementScreen: (context) => const DriverManagementScreen(),
+    fleetInventoryScreen: (context) => const FleetInventoryScreen(),
+    checkoutScreen: (context) => const CheckoutScreen(),
+    rentalStatusScreen: (context) => const RentalStatusScreen(),
+    aboutAppScreen: (context) => const AboutAppScreen(),
+    notificationPreferencesScreen: (context) =>
+        const NotificationPreferencesScreen(),
+    // TODO: Add your other routes here
+  };
 }

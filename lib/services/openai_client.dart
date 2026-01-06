@@ -13,9 +13,9 @@ class OpenAIClient {
   /// Best for: Simple Q&A where you need the full answer at once
   Future<Completion> createChatCompletion({
     required List<ChatMessage> messages,
-    String model = 'gpt-5-mini',
-    String? reasoningEffort,
-    String? verbosity,
+    String model = 'gpt-3.5-turbo',
+    double temperature = 0.7,
+    int? maxTokens,
   }) async {
     try {
       final requestData = <String, dynamic>{
@@ -26,15 +26,11 @@ class OpenAIClient {
                   'content': m.content,
                 })
             .toList(),
+        'temperature': temperature,
       };
 
-      // Add GPT-5 specific parameters
-      if (model.startsWith('gpt-5') ||
-          model.startsWith('o3') ||
-          model.startsWith('o4')) {
-        if (reasoningEffort != null)
-          requestData['reasoning_effort'] = reasoningEffort;
-        if (verbosity != null) requestData['verbosity'] = verbosity;
+      if (maxTokens != null) {
+        requestData['max_tokens'] = maxTokens;
       }
 
       final response = await dio.post('/chat/completions', data: requestData);
@@ -56,9 +52,9 @@ class OpenAIClient {
   /// Best for: Chat interfaces where you want to show responses as they arrive
   Stream<StreamCompletion> streamChatCompletion({
     required List<ChatMessage> messages,
-    String model = 'gpt-5-mini',
-    String? reasoningEffort,
-    String? verbosity,
+    String model = 'gpt-3.5-turbo',
+    double temperature = 0.7,
+    int? maxTokens,
   }) async* {
     try {
       final requestData = <String, dynamic>{
@@ -70,15 +66,11 @@ class OpenAIClient {
                 })
             .toList(),
         'stream': true,
+        'temperature': temperature,
       };
 
-      // Add GPT-5 specific parameters
-      if (model.startsWith('gpt-5') ||
-          model.startsWith('o3') ||
-          model.startsWith('o4')) {
-        if (reasoningEffort != null)
-          requestData['reasoning_effort'] = reasoningEffort;
-        if (verbosity != null) requestData['verbosity'] = verbosity;
+      if (maxTokens != null) {
+        requestData['max_tokens'] = maxTokens;
       }
 
       final response = await dio.post(
@@ -124,15 +116,15 @@ class OpenAIClient {
   /// User-friendly streaming wrapper that just yields content strings
   Stream<String> streamContentOnly({
     required List<ChatMessage> messages,
-    String model = 'gpt-5-mini',
-    String? reasoningEffort,
-    String? verbosity,
+    String model = 'gpt-3.5-turbo',
+    double temperature = 0.7,
+    int? maxTokens,
   }) async* {
     await for (final chunk in streamChatCompletion(
       messages: messages,
       model: model,
-      reasoningEffort: reasoningEffort,
-      verbosity: verbosity,
+      temperature: temperature,
+      maxTokens: maxTokens,
     )) {
       if (chunk.content.isNotEmpty) {
         yield chunk.content;
