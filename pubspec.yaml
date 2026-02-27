@@ -31,11 +31,12 @@ dependencies:
   pay: ^3.2.1
   intl: ^0.20.2
   url_launcher: ^6.3.1       # For opening Facebook Messenger link and external URLs, phone calls, email functionality
-  google_sign_in: ^7.1.1
+  google_sign_in: ^6.2.1
   sign_in_with_apple: ^7.0.1
   flutter_facebook_auth: ^7.1.5
 
   universal_html: ^2.2.4
+  flutter_riverpod: any
 dev_dependencies:
   flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE

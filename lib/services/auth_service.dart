@@ -1,14 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart' as google_sign_in;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import './auth_service_web_stub.dart';
 import './supabase_service.dart';
 
-// Conditional import for Google Sign In (not available on web)
-import 'package:google_sign_in/google_sign_in.dart'
-    if (dart.library.html) 'auth_service_web_stub.dart';
+// Import Google Sign In with conditional logic
 
 class AuthService {
   final SupabaseClient _client = SupabaseService.instance.client;
@@ -72,11 +70,11 @@ class AuthService {
         throw Exception('ใช้ signInWithGoogleWeb สำหรับ Web');
       }
 
-      final googleSignIn = GoogleSignIn(
+      final googleSignIn = google_sign_in.GoogleSignIn(
         serverClientId: _googleWebClientId,
       );
 
-      GoogleSignInAccount? user = await googleSignIn.signInSilently();
+      google_sign_in.GoogleSignInAccount? user = await googleSignIn.signInSilently();
       user ??= await googleSignIn.signIn();
 
       if (user == null) {
@@ -180,7 +178,7 @@ class AuthService {
     try {
       if (!kIsWeb) {
         if (_googleWebClientId.isNotEmpty) {
-          final googleSignIn = GoogleSignIn(
+          final googleSignIn = google_sign_in.GoogleSignIn(
             serverClientId: _googleWebClientId,
           );
           if (await googleSignIn.isSignedIn()) {

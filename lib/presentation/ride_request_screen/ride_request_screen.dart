@@ -4,9 +4,10 @@ import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
+import '../../services/magic_link_auth_service.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import './widgets/ai_chatbot_widget.dart';
 import './widgets/fare_estimation_widget.dart';
+import './widgets/magic_link_booking_dialog.dart';
 import './widgets/promo_banner_widget.dart';
 import './widgets/request_ride_button.dart';
 import './widgets/vehicle_selection_carousel.dart';
@@ -20,6 +21,7 @@ class RideRequestScreen extends StatefulWidget {
 
 class _RideRequestScreenState extends State<RideRequestScreen> {
   final ScrollController _scrollController = ScrollController();
+  final MagicLinkAuthService _authService = MagicLinkAuthService();
 
   int _selectedVehicleIndex = 0;
   bool _isLoading = false;
@@ -79,8 +81,10 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                   ),
                   child: SafeArea(
                     child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 2.h,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -199,7 +203,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
           ],
         ),
       ),
-      floatingActionButton: const AIChatbotWidget(),
+      floatingActionButton: null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
@@ -240,7 +244,9 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                     padding: EdgeInsets.only(top: 1.h),
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                          horizontal: 3.w, vertical: 0.8.h),
+                        horizontal: 3.w,
+                        vertical: 0.8.h,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -248,8 +254,11 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.local_offer,
-                              size: 14, color: Colors.green),
+                          Icon(
+                            Icons.local_offer,
+                            size: 14,
+                            color: Colors.green,
+                          ),
                           SizedBox(width: 1.w),
                           Text(
                             'ประหยัด 25% สำหรับการเช่า 7 วันขึ้นไป',
@@ -589,10 +598,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          emoji,
-          style: TextStyle(fontSize: 20.sp),
-        ),
+        Text(emoji, style: TextStyle(fontSize: 20.sp)),
         SizedBox(width: 3.w),
         Expanded(
           child: Column(
@@ -859,11 +865,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
                 ],
               ),
             ),
-            Icon(
-              Icons.open_in_new,
-              size: 16,
-              color: theme.colorScheme.primary,
-            ),
+            Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.primary),
           ],
         ),
       ),
@@ -967,8 +969,10 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
               leading: Icon(Icons.location_city),
               title: Text('สำนักงานในเมือง'),
               onTap: () {
-                setState(() => _pickupLocation =
-                    'สำนักงานในเมือง - 79QPF+QQM Chiang Phin');
+                setState(
+                  () => _pickupLocation =
+                      'สำนักงานในเมือง - 79QPF+QQM Chiang Phin',
+                );
                 Navigator.pop(context);
               },
             ),
@@ -982,8 +986,61 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
 
-    await _openMessenger();
+    // Check if user is already authenticated
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      setState(() => _isLoading = false);
+      // Show Magic Link auth dialog
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => MagicLinkBookingDialog(
+            onAuthSuccess: () {
+              // After auth, proceed to open messenger
+              _proceedWithBooking();
+            },
+          ),
+        );
+      }
+      return;
+    }
 
+    await _proceedWithBooking();
+  }
+
+  Future<void> _proceedWithBooking() async {
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    final currentUser = _authService.currentUser;
+    final role = _authService.currentUserRole;
+
+    // Show role-based greeting if Super_Admin
+    if (currentUser != null && role == 'Super_Admin' && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.admin_panel_settings,
+                  color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '👑 ยินดีต้อนรับ Super_Admin: ${currentUser.email}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.amber.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
+    await _openMessenger();
     setState(() => _isLoading = false);
   }
 
@@ -1049,16 +1106,14 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
     try {
       if (await canLaunchUrl(messengerUrl)) {
-        await launchUrl(
-          messengerUrl,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(messengerUrl, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  'ไม่สามารถเปิด Messenger ได้ กรุณาติดต่อโดยตรงที่ 086-634-8619'),
+                'ไม่สามารถเปิด Messenger ได้ กรุณาติดต่อโดยตรงที่ 086-634-8619',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -1068,7 +1123,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('เกิดข้อผิดพลาด กรุณาติดต่อที่ 086-634-8619'),
+            content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1082,7 +1137,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('โค้ดโปรโมชั่น "$code" ถูกใช้แล้ว!'),
+        content: Text('โค้ด_PROMotion "$code" ถูกใช้แล้ว!'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
       ),
@@ -1297,10 +1352,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
     try {
       if (await canLaunchUrl(url)) {
-        await launchUrl(
-          url,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(url, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1332,29 +1384,26 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
 
     // Try Google Maps app first, then fallback to web
     final googleMapsAppUrl = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude&query_place_id=ChIJYTN9FjlJTDERwAWjmGLggDw');
+      'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude&query_place_id=ChIJYTN9FjlJTDERwAWjmGLggDw',
+    );
 
     final googleMapsWebUrl = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&destination_place_id=ChIJYTN9FjlJTDERwAWjmGLggDw');
+      'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&destination_place_id=ChIJYTN9FjlJTDERwAWjmGLggDw',
+    );
 
     try {
       // Try to launch Google Maps
       if (await canLaunchUrl(googleMapsAppUrl)) {
-        await launchUrl(
-          googleMapsAppUrl,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(googleMapsAppUrl, mode: LaunchMode.externalApplication);
       } else if (await canLaunchUrl(googleMapsWebUrl)) {
-        await launchUrl(
-          googleMapsWebUrl,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(googleMapsWebUrl, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  'ไม่สามารถเปิด Google Maps ได้ กรุณาติดต่อ 086-634-8619'),
+                'ไม่สามารถเปิด Google Maps ได้ กรุณาติดต่อ 086-634-8619',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );

@@ -3,6 +3,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../models/fleet_vehicle_model.dart';
 import '../../services/fleet_service.dart';
+import '../../routes/app_routes.dart';
 import './widgets/fleet_filter_sheet.dart';
 import './widgets/fleet_vehicle_card.dart';
 import './widgets/vehicle_details_modal.dart';
@@ -54,9 +55,9 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
       }
     }
   }
@@ -70,15 +71,15 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         filtered = filtered.where((vehicle) {
-          return vehicle.brand
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()) ||
-              vehicle.model
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()) ||
-              vehicle.licenseplate
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase());
+          return vehicle.brand.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              vehicle.model.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              vehicle.licenseplate.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              );
         }).toList();
       }
 
@@ -137,9 +138,9 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาดในการกรอง: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาดในการกรอง: $e')));
       }
     }
   }
@@ -160,28 +161,29 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
           selectedSeats: _selectedSeats,
           availabilityStartDate: _availabilityStartDate,
           availabilityEndDate: _availabilityEndDate,
-          onApplyFilter: ({
-            required String status,
-            double? minPrice,
-            double? maxPrice,
-            List<String>? transmissions,
-            List<String>? fuelTypes,
-            int? seats,
-            DateTime? startDate,
-            DateTime? endDate,
-          }) {
-            setState(() {
-              _selectedStatus = status;
-              _minPrice = minPrice;
-              _maxPrice = maxPrice;
-              _selectedTransmissions = transmissions ?? [];
-              _selectedFuelTypes = fuelTypes ?? [];
-              _selectedSeats = seats;
-              _availabilityStartDate = startDate;
-              _availabilityEndDate = endDate;
-            });
-            _filterVehicles();
-          },
+          onApplyFilter:
+              ({
+                required String status,
+                double? minPrice,
+                double? maxPrice,
+                List<String>? transmissions,
+                List<String>? fuelTypes,
+                int? seats,
+                DateTime? startDate,
+                DateTime? endDate,
+              }) {
+                setState(() {
+                  _selectedStatus = status;
+                  _minPrice = minPrice;
+                  _maxPrice = maxPrice;
+                  _selectedTransmissions = transmissions ?? [];
+                  _selectedFuelTypes = fuelTypes ?? [];
+                  _selectedSeats = seats;
+                  _availabilityStartDate = startDate;
+                  _availabilityEndDate = endDate;
+                });
+                _filterVehicles();
+              },
         ),
       ),
     );
@@ -223,105 +225,194 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Color(0xFFE0E5EC),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFE0E5EC),
         elevation: 0,
+        leading: Container(
+          margin: EdgeInsets.all(2.w),
+          decoration: BoxDecoration(
+            color: Color(0xFFE0E5EC),
+            borderRadius: BorderRadius.circular(12.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withAlpha(230),
+                offset: Offset(-4, -4),
+                blurRadius: 8.0,
+              ),
+              BoxShadow(
+                color: Colors.black.withAlpha(38),
+                offset: Offset(4, 4),
+                blurRadius: 8.0,
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(Icons.home, color: Color(0xFF6B7A99), size: 20.sp),
+            onPressed: () {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.rideRequest,
+                (route) => false,
+              );
+            },
+            padding: EdgeInsets.zero,
+          ),
+        ),
         title: Text(
           'Fleet Inventory',
           style: TextStyle(
-            color: Colors.black87,
+            color: Color(0xFF2C3E50),
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.filter_list, color: Colors.black87),
-                onPressed: _showFilterSheet,
-              ),
-              if (_hasActiveFilters)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: EdgeInsets.all(0.5.w),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: BoxConstraints(
-                      minWidth: 4.w,
-                      minHeight: 4.w,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$_activeFilterCount',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 8.sp,
-                          fontWeight: FontWeight.bold,
+          Container(
+            margin: EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFE0E5EC),
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withAlpha(230),
+                  offset: Offset(-4, -4),
+                  blurRadius: 8.0,
+                ),
+                BoxShadow(
+                  color: Colors.black.withAlpha(38),
+                  offset: Offset(4, 4),
+                  blurRadius: 8.0,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.filter_list, color: Color(0xFF6B7A99)),
+                  onPressed: _showFilterSheet,
+                ),
+                if (_hasActiveFilters)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(0.5.w),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF5B9FED),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: BoxConstraints(
+                        minWidth: 4.w,
+                        minHeight: 4.w,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$_activeFilterCount',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: Colors.black87),
-            onPressed: _loadFleetVehicles,
+          Container(
+            margin: EdgeInsets.only(right: 2.w, top: 1.h, bottom: 1.h),
+            decoration: BoxDecoration(
+              color: Color(0xFFE0E5EC),
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withAlpha(230),
+                  offset: Offset(-4, -4),
+                  blurRadius: 8.0,
+                ),
+                BoxShadow(
+                  color: Colors.black.withAlpha(38),
+                  offset: Offset(4, 4),
+                  blurRadius: 8.0,
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.refresh, color: Color(0xFF6B7A99)),
+              onPressed: _loadFleetVehicles,
+            ),
           ),
         ],
       ),
       body: Column(
         children: [
           Container(
-            color: Colors.white,
+            color: Color(0xFFE0E5EC),
             padding: EdgeInsets.all(3.w),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-                _filterVehicles();
-              },
-              decoration: InputDecoration(
-                hintText: 'ค้นหารถ (ยี่ห้อ, รุ่น, ทะเบียน)',
-                hintStyle: TextStyle(fontSize: 14.sp),
-                prefixIcon: Icon(Icons.search, size: 20.sp),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, size: 20.sp),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                          _filterVehicles();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Color(0xFFE0E5EC),
+                borderRadius: BorderRadius.circular(16.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(38),
+                    offset: Offset(4, 4),
+                    blurRadius: 10.0,
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withAlpha(230),
+                    offset: Offset(-4, -4),
+                    blurRadius: 10.0,
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() => _searchQuery = value);
+                  _filterVehicles();
+                },
+                decoration: InputDecoration(
+                  hintText: 'ค้นหารถ (ยี่ห้อ, รุ่น, ทะเบียน)',
+                  hintStyle: TextStyle(
+                    fontSize: 14.sp,
+                    color: Color(0xFF9BA8B8),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20.sp,
+                    color: Color(0xFF6B7A99),
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            size: 20.sp,
+                            color: Color(0xFF6B7A99),
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                            _filterVehicles();
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 3.w,
+                    vertical: 1.5.h,
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
               ),
             ),
           ),
           Container(
-            color: Colors.white,
+            color: Color(0xFFE0E5EC),
             padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -331,7 +422,7 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
+                    color: Color(0xFF6B7A99),
                   ),
                 ),
                 if (_hasActiveFilters)
@@ -351,10 +442,24 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
                     },
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                          horizontal: 2.w, vertical: 0.5.h),
+                        horizontal: 2.w,
+                        vertical: 0.5.h,
+                      ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withAlpha(26),
-                        borderRadius: BorderRadius.circular(8.0),
+                        color: Color(0xFFE0E5EC),
+                        borderRadius: BorderRadius.circular(12.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withAlpha(230),
+                            offset: Offset(-3, -3),
+                            blurRadius: 6.0,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withAlpha(38),
+                            offset: Offset(3, 3),
+                            blurRadius: 6.0,
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -363,14 +468,14 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
                             'ตัวกรอง: $_activeFilterCount',
                             style: TextStyle(
                               fontSize: 12.sp,
-                              color: Theme.of(context).primaryColor,
+                              color: Color(0xFF5B9FED),
                             ),
                           ),
                           SizedBox(width: 1.w),
                           Icon(
                             Icons.close,
                             size: 16.sp,
-                            color: Theme.of(context).primaryColor,
+                            color: Color(0xFF5B9FED),
                           ),
                         ],
                       ),
@@ -381,65 +486,73 @@ class _FleetInventoryScreenState extends State<FleetInventoryScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: CircularProgressIndicator(color: Color(0xFF5B9FED)),
+                  )
                 : _filteredVehicles.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.directions_car_outlined,
-                                size: 60.sp, color: Colors.grey[400]),
-                            SizedBox(height: 2.h),
-                            Text(
-                              'ไม่พบรถที่ตรงกับเงื่อนไข',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            SizedBox(height: 1.h),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedStatus = 'all';
-                                  _minPrice = null;
-                                  _maxPrice = null;
-                                  _selectedTransmissions = [];
-                                  _selectedFuelTypes = [];
-                                  _selectedSeats = null;
-                                  _availabilityStartDate = null;
-                                  _availabilityEndDate = null;
-                                  _searchQuery = '';
-                                  _searchController.clear();
-                                });
-                                _filterVehicles();
-                              },
-                              child: Text('ล้างตัวกรอง'),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.directions_car_outlined,
+                          size: 60.sp,
+                          color: Color(0xFF9BA8B8),
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadFleetVehicles,
-                        child: GridView.builder(
-                          padding: EdgeInsets.all(3.w),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 3.w,
-                            mainAxisSpacing: 2.h,
-                            childAspectRatio: 0.75,
+                        SizedBox(height: 2.h),
+                        Text(
+                          'ไม่พบรถที่ตรงกับเงื่อนไข',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Color(0xFF6B7A99),
                           ),
-                          itemCount: _filteredVehicles.length,
-                          itemBuilder: (context, index) {
-                            return FleetVehicleCard(
-                              vehicle: _filteredVehicles[index],
-                              onTap: () =>
-                                  _showVehicleDetails(_filteredVehicles[index]),
-                            );
-                          },
                         ),
+                        SizedBox(height: 1.h),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedStatus = 'all';
+                              _minPrice = null;
+                              _maxPrice = null;
+                              _selectedTransmissions = [];
+                              _selectedFuelTypes = [];
+                              _selectedSeats = null;
+                              _availabilityStartDate = null;
+                              _availabilityEndDate = null;
+                              _searchQuery = '';
+                              _searchController.clear();
+                            });
+                            _filterVehicles();
+                          },
+                          child: Text(
+                            'ล้างตัวกรอง',
+                            style: TextStyle(color: Color(0xFF5B9FED)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadFleetVehicles,
+                    color: Color(0xFF5B9FED),
+                    child: GridView.builder(
+                      padding: EdgeInsets.all(3.w),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 4.w,
+                        mainAxisSpacing: 2.5.h,
+                        childAspectRatio: 0.68,
                       ),
+                      itemCount: _filteredVehicles.length,
+                      itemBuilder: (context, index) {
+                        return FleetVehicleCard(
+                          vehicle: _filteredVehicles[index],
+                          onTap: () =>
+                              _showVehicleDetails(_filteredVehicles[index]),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
