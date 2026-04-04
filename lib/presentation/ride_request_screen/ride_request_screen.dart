@@ -1022,8 +1022,11 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.admin_panel_settings,
-                  color: Colors.white, size: 18),
+              const Icon(
+                Icons.admin_panel_settings,
+                color: Colors.white,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1183,7 +1186,7 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Notifications',
+                  'การแจ้งเตือน',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,

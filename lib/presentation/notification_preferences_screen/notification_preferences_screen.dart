@@ -108,7 +108,7 @@ class _NotificationPreferencesScreenState
           }
         });
 
-        _showRealtimeSyncSnackBar('Preferences synced from another device');
+        _showRealtimeSyncSnackBar('ซิงค์การตั้งค่าจากอุปกรณ์อื่นแล้ว');
       } else if (eventType == 'PostgresChangeEvent.insert' &&
           newData.isNotEmpty) {
         final newPreference = NotificationPreferenceModel.fromJson(newData);
@@ -132,7 +132,7 @@ class _NotificationPreferencesScreenState
           children: [
             Icon(Icons.sync, color: Colors.white, size: 18.sp),
             SizedBox(width: 3.w),
-            Expanded(child: Text(message)),
+            Expanded(child: Text('ซิงค์การตั้งค่าจากอุปกรณ์อื่นแล้ว')),
           ],
         ),
         backgroundColor: Colors.blue.shade600,
@@ -324,8 +324,10 @@ class _NotificationPreferencesScreenState
                       color: Colors.red.shade600,
                       shape: BoxShape.circle,
                     ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     child: Text(
                       '${_realtimeService.unreadCount > 9 ? '9+' : _realtimeService.unreadCount}',
                       style: const TextStyle(
@@ -346,217 +348,215 @@ class _NotificationPreferencesScreenState
           _isLoading
               ? Center(
                   child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.blue.shade700,
+                    ),
                   ),
                 )
               : _errorMessage != null
-                  ? Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(5.w),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 30.sp,
-                              color: Colors.red.shade400,
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(5.w),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 30.sp,
+                          color: Colors.red.shade400,
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'ไม่สามารถโหลดการตั้งค่าได้',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 1.h),
+                        Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 3.h),
+                        ElevatedButton.icon(
+                          onPressed: _loadPreferences,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('ลองอีกครั้ง'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade700,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 1.5.h,
                             ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              'ไม่สามารถโหลดการตั้งค่าได้',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            SizedBox(height: 1.h),
-                            Text(
-                              _errorMessage!,
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.grey.shade600,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 3.h),
-                            ElevatedButton.icon(
-                              onPressed: _loadPreferences,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('ลองอีกครั้ง'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8.w,
-                                  vertical: 1.5.h,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadPreferences,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.all(4.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Real-time status indicator
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 4.w,
+                            vertical: 1.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(10.0),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 2.w,
+                                height: 2.w,
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade600,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 2.w),
+                              Text(
+                                'การแจ้งเตือนแบบเรียลไทม์ทำงานอยู่',
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: Colors.green.shade800,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.wifi,
+                                size: 14.sp,
+                                color: Colors.green.shade600,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadPreferences,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(4.w),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Real-time status indicator
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 4.w,
-                                vertical: 1.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(10.0),
-                                border:
-                                    Border.all(color: Colors.green.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 2.w,
-                                    height: 2.w,
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade600,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  SizedBox(width: 2.w),
-                                  Text(
-                                    'การแจ้งเตือนแบบเรียลไทม์ทำงานอยู่',
-                                    style: TextStyle(
-                                      fontSize: 11.sp,
-                                      color: Colors.green.shade800,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Icon(
-                                    Icons.wifi,
-                                    size: 14.sp,
-                                    color: Colors.green.shade600,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 2.h),
+                        SizedBox(height: 2.h),
 
-                            // Notification Inbox
-                            const NotificationInboxWidget(),
-                            SizedBox(height: 2.h),
+                        // Notification Inbox
+                        const NotificationInboxWidget(),
+                        SizedBox(height: 2.h),
 
-                            BatchControlWidget(
-                              onEnableAll: _enableAllNotifications,
-                              onDisableAll: _disableAllNotifications,
-                              isLoading: _isSaving,
-                            ),
-                            SizedBox(height: 3.h),
-
-                            // Section header
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 4.w,
-                                vertical: 1.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.tune,
-                                    size: 16.sp,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                  SizedBox(width: 2.w),
-                                  Text(
-                                    'ส่วนตั้งค่าการแจ้งเตือน',
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 2.h),
-
-                            PreferenceSectionWidget(
-                              title: 'การแจ้งเตือนการจอง',
-                              icon: Icons.event_note,
-                              preferences: _groupedPreferences[
-                                      'Booking Notifications'] ??
-                                  [],
-                              onToggle: _togglePreference,
-                              loadingPreferences: _loadingPreferences,
-                            ),
-                            PreferenceSectionWidget(
-                              title: 'การแจ้งเตือนการชำระเงิน',
-                              icon: Icons.payment,
-                              preferences: _groupedPreferences[
-                                      'Payment Notifications'] ??
-                                  [],
-                              onToggle: _togglePreference,
-                              loadingPreferences: _loadingPreferences,
-                            ),
-                            PreferenceSectionWidget(
-                              title: 'การสื่อสารกับคนขับ',
-                              icon: Icons.directions_car,
-                              preferences:
-                                  _groupedPreferences['Driver Communication'] ??
-                                      [],
-                              onToggle: _togglePreference,
-                              loadingPreferences: _loadingPreferences,
-                            ),
-                            PreferenceSectionWidget(
-                              title: 'การตลาดและอัปเดต',
-                              icon: Icons.campaign,
-                              preferences:
-                                  _groupedPreferences['Marketing & Updates'] ??
-                                      [],
-                              onToggle: _togglePreference,
-                              loadingPreferences: _loadingPreferences,
-                            ),
-                            SizedBox(height: 2.h),
-                            Container(
-                              padding: EdgeInsets.all(4.w),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    color: Colors.blue.shade700,
-                                    size: 20.sp,
-                                  ),
-                                  SizedBox(width: 3.w),
-                                  Expanded(
-                                    child: Text(
-                                      'การเปลี่ยนแปลงจะบันทึกโดยอัตโนมัติ การแจ้งเตือนแบบเรียลไทม์จะส่งทันทีสำหรับความพร้อมใช้งานรถ การยืนยันการจอง และอัปเดตสถานะการเช่า',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: Colors.blue.shade900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 3.h),
-                          ],
+                        BatchControlWidget(
+                          onEnableAll: _enableAllNotifications,
+                          onDisableAll: _disableAllNotifications,
+                          isLoading: _isSaving,
                         ),
-                      ),
+                        SizedBox(height: 3.h),
+
+                        // Section header
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 4.w,
+                            vertical: 1.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.tune,
+                                size: 16.sp,
+                                color: Colors.grey.shade700,
+                              ),
+                              SizedBox(width: 2.w),
+                              Text(
+                                'ส่วนตั้งค่าการแจ้งเตือน',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+
+                        PreferenceSectionWidget(
+                          title: 'การแจ้งเตือนการจอง',
+                          icon: Icons.event_note,
+                          preferences:
+                              _groupedPreferences['Booking Notifications'] ??
+                              [],
+                          onToggle: _togglePreference,
+                          loadingPreferences: _loadingPreferences,
+                        ),
+                        PreferenceSectionWidget(
+                          title: 'การแจ้งเตือนการชำระเงิน',
+                          icon: Icons.payment,
+                          preferences:
+                              _groupedPreferences['Payment Notifications'] ??
+                              [],
+                          onToggle: _togglePreference,
+                          loadingPreferences: _loadingPreferences,
+                        ),
+                        PreferenceSectionWidget(
+                          title: 'การสื่อสารกับคนขับ',
+                          icon: Icons.directions_car,
+                          preferences:
+                              _groupedPreferences['Driver Communication'] ?? [],
+                          onToggle: _togglePreference,
+                          loadingPreferences: _loadingPreferences,
+                        ),
+                        PreferenceSectionWidget(
+                          title: 'การตลาดและอัปเดต',
+                          icon: Icons.campaign,
+                          preferences:
+                              _groupedPreferences['Marketing & Updates'] ?? [],
+                          onToggle: _togglePreference,
+                          loadingPreferences: _loadingPreferences,
+                        ),
+                        SizedBox(height: 2.h),
+                        Container(
+                          padding: EdgeInsets.all(4.w),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.blue.shade700,
+                                size: 20.sp,
+                              ),
+                              SizedBox(width: 3.w),
+                              Expanded(
+                                child: Text(
+                                  'การเปลี่ยนแปลงจะบันทึกโดยอัตโนมัติ การแจ้งเตือนแบบเรียลไทม์จะส่งทันทีสำหรับความพร้อมใช้งานรถ การยืนยันการจอง และอัปเดตสถานะการเช่า',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Colors.blue.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 3.h),
+                      ],
                     ),
+                  ),
+                ),
 
           // Floating notification banners overlay
           if (_activeBanners.isNotEmpty)

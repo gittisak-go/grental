@@ -15,7 +15,7 @@ class ReservationService {
           .map((item) => ReservationModel.fromJson(item))
           .toList();
     } catch (e) {
-      throw Exception('Failed to fetch reservations: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลการจองได้: $e');
     }
   }
 
@@ -33,7 +33,7 @@ class ReservationService {
           .map((item) => ReservationModel.fromJson(item))
           .toList();
     } catch (e) {
-      throw Exception('Failed to fetch reservations by status: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลการจองตามสถานะได้: $e');
     }
   }
 
@@ -49,7 +49,7 @@ class ReservationService {
           .map((item) => ReservationModel.fromJson(item))
           .toList();
     } catch (e) {
-      throw Exception('Failed to fetch active reservations: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลการจองที่ใช้งานอยู่ได้: $e');
     }
   }
 
@@ -63,7 +63,7 @@ class ReservationService {
 
       return ReservationModel.fromJson(response);
     } catch (e) {
-      throw Exception('Failed to fetch reservation: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลการจองได้: $e');
     }
   }
 
@@ -77,7 +77,7 @@ class ReservationService {
 
       return ReservationModel.fromJson(response);
     } catch (e) {
-      throw Exception('Failed to add reservation: $e');
+      throw Exception('ไม่สามารถเพิ่มการจองได้: $e');
     }
   }
 
@@ -89,7 +89,7 @@ class ReservationService {
           .update(reservation.toJson())
           .eq('id', id);
     } catch (e) {
-      throw Exception('Failed to update reservation: $e');
+      throw Exception('ไม่สามารถอัปเดตการจองได้: $e');
     }
   }
 
@@ -101,7 +101,7 @@ class ReservationService {
           .from('reservations')
           .update({'status': statusString}).eq('id', id);
     } catch (e) {
-      throw Exception('Failed to update reservation status: $e');
+      throw Exception('ไม่สามารถอัปเดตสถานะการจองได้: $e');
     }
   }
 
@@ -109,7 +109,7 @@ class ReservationService {
     try {
       await _supabaseService.client.from('reservations').delete().eq('id', id);
     } catch (e) {
-      throw Exception('Failed to delete reservation: $e');
+      throw Exception('ไม่สามารถลบการจองได้: $e');
     }
   }
 
@@ -127,7 +127,7 @@ class ReservationService {
 
       return response == true;
     } catch (e) {
-      throw Exception('Failed to check vehicle availability: $e');
+      throw Exception('ไม่สามารถตรวจสอบความพร้อมของรถได้: $e');
     }
   }
 
@@ -143,7 +143,7 @@ class ReservationService {
           .map((item) => ReservationModel.fromJson(item))
           .toList();
     } catch (e) {
-      throw Exception('Failed to search reservations: $e');
+      throw Exception('ไม่สามารถค้นหาการจองได้: $e');
     }
   }
 }

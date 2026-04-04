@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../services/magic_link_auth_service.dart';
+import '../../services/supabase_service.dart';
 import '../../widgets/custom_icon_widget.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import './widgets/payment_card_widget.dart';
@@ -23,37 +25,96 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _notificationsEnabled = true;
   bool _locationEnabled = true;
   bool _biometricEnabled = false;
+  bool _isLoading = true;
 
-  // Mock user data with Thai localization
-  final Map<String, dynamic> _userData = {
-    "name": "Patteera Sunatrai",
-    "email": "Patty_patteera19@hotmail.com",
-    "phone": "086 634 8619",
-    "membershipStatus": "CEO (Chief Executive Officer)",
+  final MagicLinkAuthService _authService = MagicLinkAuthService();
+
+  Map<String, dynamic> _userData = {
+    "name": "ผู้ใช้งาน",
+    "email": "",
+    "phone": "-",
+    "membershipStatus": "สมาชิก",
     "profileImage": "assets/images/ceo-1767538725333.jpg",
-    "emergencyContacts": [
-      {
-        "name": "John Johnson",
-        "phone": "+1 (555) 987-6543",
-        "relation": "คู่สมรส",
-      },
-      {
-        "name": "Emily Johnson",
-        "phone": "+1 (555) 456-7890",
-        "relation": "พี่สาว",
-      },
-    ],
-    "paymentMethods": [
-      {"type": "Visa", "lastFour": "4532", "isDefault": true},
-      {"type": "Mastercard", "lastFour": "8901", "isDefault": false},
-      {"type": "American Express", "lastFour": "2345", "isDefault": false},
-    ],
+    "emergencyContacts": [],
+    "paymentMethods": [],
     "preferences": {
       "vehicleType": "สะดวกสบาย",
       "autoTip": "15%",
       "pickupInstructions": "กรุณาโทรหาเมื่อมาถึง",
     },
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = _authService.currentUser;
+      if (user != null) {
+        final email = user.email ?? '';
+        final role = await _authService.fetchUserRole();
+
+        // Try to fetch profile from Supabase
+        try {
+          final response = await SupabaseService.instance.client
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .maybeSingle();
+
+          if (response != null) {
+            setState(() {
+              _userData = {
+                "name": response['full_name'] ?? response['email'] ?? email,
+                "email": email,
+                "phone": response['phone'] ?? '-',
+                "membershipStatus": role == 'Super_Admin'
+                    ? 'ผู้ดูแลระบบ'
+                    : 'สมาชิก',
+                "profileImage":
+                    response['avatar_url'] ??
+                    "assets/images/ceo-1767538725333.jpg",
+                "emergencyContacts": _userData["emergencyContacts"],
+                "paymentMethods": _userData["paymentMethods"],
+                "preferences": _userData["preferences"],
+              };
+              _isLoading = false;
+            });
+            return;
+          }
+        } catch (_) {}
+
+        // Fallback: use auth data
+        setState(() {
+          _userData = {
+            "name": email.split('@').first,
+            "email": email,
+            "phone": '-',
+            "membershipStatus": role == 'Super_Admin'
+                ? 'ผู้ดูแลระบบ'
+                : 'สมาชิก',
+            "profileImage": "assets/images/ceo-1767538725333.jpg",
+            "emergencyContacts": [],
+            "paymentMethods": [],
+            "preferences": {
+              "vehicleType": "สะดวกสบาย",
+              "autoTip": "15%",
+              "pickupInstructions": "กรุณาโทรหาเมื่อมาถึง",
+            },
+          };
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,238 +151,294 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            SizedBox(height: 2.h),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: 2.h),
 
-            // Profile Header
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
-              child: ProfileHeaderWidget(
-                userName: _userData["name"] as String,
-                userEmail: _userData["email"] as String,
-                membershipStatus: _userData["membershipStatus"] as String,
-                profileImageUrl: _userData["profileImage"] as String,
-                onEditProfile: _showEditProfileDialog,
+                  // Profile Header
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    child: ProfileHeaderWidget(
+                      userName: _userData["name"] as String,
+                      userEmail: _userData["email"] as String,
+                      membershipStatus: _userData["membershipStatus"] as String,
+                      profileImageUrl: _userData["profileImage"] as String,
+                      onEditProfile: _showEditProfileDialog,
+                    ),
+                  ),
+
+                  SizedBox(height: 4.h),
+
+                  // Personal Information Section
+                  ProfileSectionWidget(
+                    title: 'ข้อมูลส่วนตัว',
+                    children: [
+                      ProfileMenuItemWidget(
+                        icon: 'person',
+                        title: 'แก้ไขโปรไฟล์',
+                        subtitle: 'อัปเดตข้อมูลส่วนตัวของคุณ',
+                        onTap: _showEditProfileDialog,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'phone',
+                        title: 'หมายเลขโทรศัพท์',
+                        subtitle: _userData["phone"] as String,
+                        onTap: _showPhoneEditDialog,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'email',
+                        title: 'อีเมล',
+                        subtitle: _userData["email"] as String,
+                        onTap: _showEmailEditDialog,
+                      ),
+                    ],
+                  ),
+
+                  // Preferences Section
+                  ProfileSectionWidget(
+                    title: 'การตั้งค่า',
+                    children: [
+                      ToggleMenuItemWidget(
+                        icon: 'dark_mode',
+                        title: 'โหมดมืด',
+                        subtitle: 'เปลี่ยนระหว่างธีมสว่างและมืด',
+                        value: _isDarkMode,
+                        onChanged: (value) {
+                          setState(() => _isDarkMode = value);
+                          HapticFeedback.lightImpact();
+                        },
+                      ),
+                      ToggleMenuItemWidget(
+                        icon: 'notifications',
+                        title: 'การแจ้งเตือน',
+                        subtitle: 'รับการอัปเดตการเดินทางและโปรโมชั่น',
+                        value: _notificationsEnabled,
+                        onChanged: (value) {
+                          setState(() => _notificationsEnabled = value);
+                          HapticFeedback.lightImpact();
+                        },
+                      ),
+                      ToggleMenuItemWidget(
+                        icon: 'location_on',
+                        title: 'บริการตำแหน่ง',
+                        subtitle: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อบริการที่ดีขึ้น',
+                        value: _locationEnabled,
+                        onChanged: (value) {
+                          setState(() => _locationEnabled = value);
+                          HapticFeedback.lightImpact();
+                        },
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'language',
+                        title: 'ภาษา',
+                        subtitle: 'ภาษาไทย',
+                        onTap: _showLanguageDialog,
+                      ),
+                    ],
+                  ),
+
+                  // Payment Methods Section
+                  ProfileSectionWidget(
+                    title: 'วิธีการชำระเงิน',
+                    showDivider: false,
+                    children: [
+                      ...((_userData["paymentMethods"] as List)
+                          .map(
+                            (card) => PaymentCardWidget(
+                              cardType: card["type"] as String,
+                              lastFourDigits: card["lastFour"] as String,
+                              isDefault: card["isDefault"] as bool,
+                              onTap: () => _showCardDetailsDialog(card),
+                              onDelete: () => _showDeleteCardDialog(card),
+                            ),
+                          )
+                          .toList()),
+                      ProfileMenuItemWidget(
+                        icon: 'add',
+                        title: 'เพิ่มวิธีการชำระเงิน',
+                        subtitle: 'เพิ่มบัตรหรือวิธีการชำระเงินใหม่',
+                        onTap: _showAddPaymentDialog,
+                        iconColor: theme.colorScheme.primary,
+                      ),
+                    ],
+                  ),
+
+                  // Ride Preferences Section
+                  ProfileSectionWidget(
+                    title: 'ความต้องการการเดินทาง',
+                    children: [
+                      ProfileMenuItemWidget(
+                        icon: 'directions_car',
+                        title: 'ประเภทยานพาหนะเริ่มต้น',
+                        subtitle:
+                            (_userData["preferences"] as Map)["vehicleType"]
+                                as String,
+                        onTap: _showVehicleTypeDialog,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'attach_money',
+                        title: 'ทิปอัตโนมัติ',
+                        subtitle:
+                            (_userData["preferences"] as Map)["autoTip"]
+                                as String,
+                        onTap: _showTipDialog,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'note',
+                        title: 'คำแนะนำการรับ',
+                        subtitle:
+                            (_userData["preferences"]
+                                    as Map)["pickupInstructions"]
+                                as String,
+                        onTap: _showInstructionsDialog,
+                      ),
+                    ],
+                  ),
+
+                  // Safety Section
+                  ProfileSectionWidget(
+                    title: 'ความปลอดภัย',
+                    children: [
+                      ProfileMenuItemWidget(
+                        icon: 'emergency',
+                        title: 'ผู้ติดต่อฉุกเฉิน',
+                        subtitle:
+                            'ผู้ติดต่อฉุกเฉิน ${(_userData["emergencyContacts"] as List).length} ราย',
+                        onTap: _showEmergencyContactsDialog,
+                      ),
+                      ToggleMenuItemWidget(
+                        icon: 'fingerprint',
+                        title: 'การยืนยันตัวตนด้วยไบอเมตริกซ์',
+                        subtitle: 'ใช้ลายนิ้วมือหรือ Face ID สำหรับการชำระเงิน',
+                        value: _biometricEnabled,
+                        onChanged: (value) {
+                          setState(() => _biometricEnabled = value);
+                          HapticFeedback.lightImpact();
+                        },
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'security',
+                        title: 'การตั้งค่าความเป็นส่วนตัว',
+                        subtitle: 'จัดการข้อมูลและความเป็นส่วนตัวของคุณ',
+                        onTap: _showPrivacyDialog,
+                      ),
+                    ],
+                  ),
+
+                  // Admin Dashboard Section — only for Super_Admin and Admin
+                  if (_authService.isCurrentUserAdmin) ...[
+                    ProfileSectionWidget(
+                      title: 'ผู้ดูแลระบบ',
+                      children: [
+                        if (_authService.isCurrentUserSuperAdmin)
+                          ProfileMenuItemWidget(
+                            icon: 'dashboard',
+                            title: 'แดชบอร์ดผู้ดูแลระบบ',
+                            subtitle: 'จัดการระบบ การจอง และรถยนต์',
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              '/admin-dashboard-screen',
+                            ),
+                            iconColor: Colors.pink,
+                          ),
+                        ProfileMenuItemWidget(
+                          icon: 'bar_chart',
+                          title: 'แดชบอร์ดผู้ดูแล (ดูข้อมูล)',
+                          subtitle: 'ดูภาพรวมสถิติและการจอง',
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/viewer-dashboard-screen',
+                          ),
+                          iconColor: Colors.blue,
+                        ),
+                        ProfileMenuItemWidget(
+                          icon: 'directions_car',
+                          title: 'จัดการรถยนต์',
+                          subtitle: 'เพิ่ม แก้ไข และจัดการรถในระบบ',
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/vehicle-management-screen',
+                          ),
+                          iconColor: Colors.orange,
+                        ),
+                        ProfileMenuItemWidget(
+                          icon: 'book_online',
+                          title: 'จัดการการจอง',
+                          subtitle: 'ดูและจัดการการจองทั้งหมด',
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/admin-reservations-screen',
+                          ),
+                          iconColor: Colors.purple,
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // Support Section
+                  ProfileSectionWidget(
+                    title: 'ฝ่ายสนับสนุน',
+                    children: [
+                      ProfileMenuItemWidget(
+                        icon: 'help',
+                        title: 'ศูนย์ช่วยเหลือ',
+                        subtitle: 'รับความช่วยเหลือและการสนับสนุน',
+                        onTap: _showHelpCenter,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'feedback',
+                        title: 'ส่งคำติชม',
+                        subtitle: 'แบ่งปันความคิดเห็นของคุณกับเรา',
+                        onTap: _showFeedbackDialog,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'info',
+                        title: 'เกี่ยวกับรุ่งโรจน์คาร์เร้นท์',
+                        subtitle: 'เวอร์ชัน 1.0.0',
+                        onTap: _showAboutDialog,
+                      ),
+                    ],
+                  ),
+
+                  // Account Management Section
+                  ProfileSectionWidget(
+                    title: 'บัญชี',
+                    children: [
+                      ProfileMenuItemWidget(
+                        icon: 'lock',
+                        title: 'เปลี่ยนรหัสผ่าน',
+                        subtitle: 'อัปเดตรหัสผ่านบัญชีของคุณ',
+                        onTap: _showChangePasswordDialog,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'logout',
+                        title: 'ออกจากระบบ',
+                        subtitle: 'ออกจากระบบบัญชีของคุณ',
+                        onTap: _showLogoutDialog,
+                        iconColor: theme.colorScheme.error,
+                        showArrow: false,
+                      ),
+                      ProfileMenuItemWidget(
+                        icon: 'delete_forever',
+                        title: 'ลบบัญชี',
+                        subtitle: 'ลบบัญชีของคุณอย่างถาวร',
+                        onTap: _showDeleteAccountDialog,
+                        iconColor: theme.colorScheme.error,
+                        showArrow: false,
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 10.h),
+                ],
               ),
             ),
-
-            SizedBox(height: 4.h),
-
-            // Personal Information Section
-            ProfileSectionWidget(
-              title: 'ข้อมูลส่วนตัว',
-              children: [
-                ProfileMenuItemWidget(
-                  icon: 'person',
-                  title: 'แก้ไขโปรไฟล์',
-                  subtitle: 'อัปเดตข้อมูลส่วนตัวของคุณ',
-                  onTap: _showEditProfileDialog,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'phone',
-                  title: 'หมายเลขโทรศัพท์',
-                  subtitle: _userData["phone"] as String,
-                  onTap: _showPhoneEditDialog,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'email',
-                  title: 'อีเมล',
-                  subtitle: _userData["email"] as String,
-                  onTap: _showEmailEditDialog,
-                ),
-              ],
-            ),
-
-            // Preferences Section
-            ProfileSectionWidget(
-              title: 'การตั้งค่า',
-              children: [
-                ToggleMenuItemWidget(
-                  icon: 'dark_mode',
-                  title: 'โหมดมืด',
-                  subtitle: 'เปลี่ยนระหว่างธีมสว่างและมืด',
-                  value: _isDarkMode,
-                  onChanged: (value) {
-                    setState(() => _isDarkMode = value);
-                    HapticFeedback.lightImpact();
-                  },
-                ),
-                ToggleMenuItemWidget(
-                  icon: 'notifications',
-                  title: 'การแจ้งเตือน',
-                  subtitle: 'รับการอัปเดตการเดินทางและโปรโมชั่น',
-                  value: _notificationsEnabled,
-                  onChanged: (value) {
-                    setState(() => _notificationsEnabled = value);
-                    HapticFeedback.lightImpact();
-                  },
-                ),
-                ToggleMenuItemWidget(
-                  icon: 'location_on',
-                  title: 'บริการตำแหน่ง',
-                  subtitle: 'อนุญาตให้เข้าถึงตำแหน่งเพื่อบริการที่ดีขึ้น',
-                  value: _locationEnabled,
-                  onChanged: (value) {
-                    setState(() => _locationEnabled = value);
-                    HapticFeedback.lightImpact();
-                  },
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'language',
-                  title: 'ภาษา',
-                  subtitle: 'ภาษาไทย',
-                  onTap: _showLanguageDialog,
-                ),
-              ],
-            ),
-
-            // Payment Methods Section
-            ProfileSectionWidget(
-              title: 'วิธีการชำระเงิน',
-              showDivider: false,
-              children: [
-                ...((_userData["paymentMethods"] as List)
-                    .map(
-                      (card) => PaymentCardWidget(
-                        cardType: card["type"] as String,
-                        lastFourDigits: card["lastFour"] as String,
-                        isDefault: card["isDefault"] as bool,
-                        onTap: () => _showCardDetailsDialog(card),
-                        onDelete: () => _showDeleteCardDialog(card),
-                      ),
-                    )
-                    .toList()),
-                ProfileMenuItemWidget(
-                  icon: 'add',
-                  title: 'เพิ่มวิธีการชำระเงิน',
-                  subtitle: 'เพิ่มบัตรหรือวิธีการชำระเงินใหม่',
-                  onTap: _showAddPaymentDialog,
-                  iconColor: theme.colorScheme.primary,
-                ),
-              ],
-            ),
-
-            // Ride Preferences Section
-            ProfileSectionWidget(
-              title: 'ความต้องการการเดินทาง',
-              children: [
-                ProfileMenuItemWidget(
-                  icon: 'directions_car',
-                  title: 'ประเภทยานพาหนะเริ่มต้น',
-                  subtitle: (_userData["preferences"] as Map)["vehicleType"]
-                      as String,
-                  onTap: _showVehicleTypeDialog,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'attach_money',
-                  title: 'ทิปอัตโนมัติ',
-                  subtitle:
-                      (_userData["preferences"] as Map)["autoTip"] as String,
-                  onTap: _showTipDialog,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'note',
-                  title: 'คำแนะนำการรับ',
-                  subtitle: (_userData["preferences"]
-                      as Map)["pickupInstructions"] as String,
-                  onTap: _showInstructionsDialog,
-                ),
-              ],
-            ),
-
-            // Safety Section
-            ProfileSectionWidget(
-              title: 'ความปลอดภัยและความปลอดภัย',
-              children: [
-                ProfileMenuItemWidget(
-                  icon: 'emergency',
-                  title: 'ผู้ติดต่อฉุกเฉิน',
-                  subtitle:
-                      'เพิ่มผู้ติดต่อฉุกเฉิน ${(_userData["emergencyContacts"] as List).length} ราย',
-                  onTap: _showEmergencyContactsDialog,
-                ),
-                ToggleMenuItemWidget(
-                  icon: 'fingerprint',
-                  title: 'การยืนยันตัวตนด้วยไบอเมตริกซ์',
-                  subtitle: 'ใช้ลายนิ้วมือหรือ Face ID สำหรับการชำระเงิน',
-                  value: _biometricEnabled,
-                  onChanged: (value) {
-                    setState(() => _biometricEnabled = value);
-                    HapticFeedback.lightImpact();
-                  },
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'security',
-                  title: 'การตั้งค่าความเป็นส่วนตัว',
-                  subtitle: 'จัดการข้อมูลและความเป็นส่วนตัวของคุณ',
-                  onTap: _showPrivacyDialog,
-                ),
-              ],
-            ),
-
-            // Support Section
-            ProfileSectionWidget(
-              title: 'ฝ่ายสนับสนุน',
-              children: [
-                ProfileMenuItemWidget(
-                  icon: 'help',
-                  title: 'ศูนย์ช่วยเหลือ',
-                  subtitle: 'รับความช่วยเหลือและการสนับสนุน',
-                  onTap: _showHelpCenter,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'feedback',
-                  title: 'ส่งคำติชม',
-                  subtitle: 'แบ่งปันความคิดเห็นของคุณกับเรา',
-                  onTap: _showFeedbackDialog,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'info',
-                  title: 'เกี่ยวกับรุ่งโรจน์คาร์เร้นท์',
-                  subtitle: 'เวอร์ชัน 1.0.0',
-                  onTap: _showAboutDialog,
-                ),
-              ],
-            ),
-
-            // Account Management Section
-            ProfileSectionWidget(
-              title: 'บัญชี',
-              children: [
-                ProfileMenuItemWidget(
-                  icon: 'lock',
-                  title: 'เปลี่ยนรหัสผ่าน',
-                  subtitle: 'อัปเดตรหัสผ่านบัญชีของคุณ',
-                  onTap: _showChangePasswordDialog,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'logout',
-                  title: 'ออกจากระบบ',
-                  subtitle: 'ออกจากระบบบัญชีของคุณ',
-                  onTap: _showLogoutDialog,
-                  iconColor: theme.colorScheme.error,
-                  showArrow: false,
-                ),
-                ProfileMenuItemWidget(
-                  icon: 'delete_forever',
-                  title: 'ลบบัญชี',
-                  subtitle: 'ลบบัญชีของคุณอย่างถาวร',
-                  onTap: _showDeleteAccountDialog,
-                  iconColor: theme.colorScheme.error,
-                  showArrow: false,
-                ),
-              ],
-            ),
-
-            SizedBox(height: 10.h), // Extra space for bottom navigation
-          ],
-        ),
-      ),
       bottomNavigationBar: CustomBottomBar(
         variant: CustomBottomBarVariant.standard,
-        currentIndex: 3, // Profile tab
+        currentIndex: 3,
         onTap: (index) {
           HapticFeedback.lightImpact();
           switch (index) {
@@ -347,7 +464,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               );
               break;
             case 3:
-              // Already on profile screen
               break;
           }
         },
@@ -359,7 +475,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
+        title: const Text('แก้ไขโปรไฟล์'),
         content: const Text(
           'ฟังก์ชันการแก้ไขโปรไฟล์จะถูกนำมาใช้ที่นี่พร้อมฟอร์มสำหรับชื่อ อีเมล และอัปโหลดรูปภาพ',
         ),
@@ -384,7 +500,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Update Phone Number'),
+        title: const Text('อัปเดตหมายเลขโทรศัพท์'),
         content: const Text(
           'การยืนยันหมายเลขโทรศัพท์จะถูกนำมาใช้ที่นี่ด้วยการยืนยัน SMS',
         ),
@@ -409,7 +525,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Update Email Address'),
+        title: const Text('อัปเดตอีเมล'),
         content: const Text(
           'ฟังก์ชันการอัปเดตอีเมลจะถูกนำมาใช้ที่นี่ด้วยการยืนยันอีเมล',
         ),
@@ -434,7 +550,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
+        title: const Text('เลือกภาษา'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -490,7 +606,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Payment Method'),
+        title: const Text('ลบวิธีการชำระเงิน'),
         content: Text(
           'คุณแน่ใจหรือไม่ว่าต้องการลบ ${card["type"]} ที่ลงท้ายด้วย ${card["lastFour"]}?',
         ),
@@ -518,7 +634,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Payment Method'),
+        title: const Text('เพิ่มวิธีการชำระเงิน'),
         content: const Text(
           'การเพิ่มวิธีการชำระเงินจะถูกนำมาใช้ที่นี่ด้วยฟอร์มการป้อนบัตรที่ปลอดภัย',
         ),
@@ -543,7 +659,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Default Vehicle Type'),
+        title: const Text('ประเภทยานพาหนะเริ่มต้น'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -594,7 +710,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Automatic Tip'),
+        title: const Text('ทิปอัตโนมัติ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -641,7 +757,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Pickup Instructions'),
+        title: const Text('คำแนะนำการรับ'),
         content: const TextField(
           maxLines: 3,
           decoration: InputDecoration(
@@ -670,28 +786,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Emergency Contacts'),
+        title: const Text('ผู้ติดต่อฉุกเฉิน'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: (_userData["emergencyContacts"] as List).length,
-            itemBuilder: (context, index) {
-              final contact = (_userData["emergencyContacts"] as List)[index];
-              return ListTile(
-                title: Text(contact["name"] as String),
-                subtitle: Text('${contact["relation"]} • ${contact["phone"]}'),
-                trailing: IconButton(
-                  icon: CustomIconWidget(
-                    iconName: 'delete',
-                    color: Theme.of(context).colorScheme.error,
-                    size: 5.w,
-                  ),
-                  onPressed: () {},
+          child: (_userData["emergencyContacts"] as List).isEmpty
+              ? const Text('ยังไม่มีผู้ติดต่อฉุกเฉิน')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: (_userData["emergencyContacts"] as List).length,
+                  itemBuilder: (context, index) {
+                    final contact =
+                        (_userData["emergencyContacts"] as List)[index];
+                    return ListTile(
+                      title: Text(contact["name"] as String),
+                      subtitle: Text(
+                        '${contact["relation"]} • ${contact["phone"]}',
+                      ),
+                      trailing: IconButton(
+                        icon: CustomIconWidget(
+                          iconName: 'delete',
+                          color: Theme.of(context).colorScheme.error,
+                          size: 5.w,
+                        ),
+                        onPressed: () {},
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
         actions: [
           TextButton(
@@ -714,7 +835,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Privacy Settings'),
+        title: const Text('การตั้งค่าความเป็นส่วนตัว'),
         content: const Text(
           'การตั้งค่าความเป็นส่วนตัวและการจัดการข้อมูลจะถูกนำมาใช้ที่นี่',
         ),
@@ -732,7 +853,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Help Center'),
+        title: const Text('ศูนย์ช่วยเหลือ'),
         content: const Text(
           'ศูนย์ช่วยเหลือพร้อม FAQ ติดต่อฝ่ายสนับสนุน และคู่มือการแก้ไขปัญหาจะถูกนำมาใช้ที่นี่',
         ),
@@ -750,7 +871,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Send Feedback'),
+        title: const Text('ส่งคำติชม'),
         content: const TextField(
           maxLines: 4,
           decoration: InputDecoration(
@@ -783,7 +904,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
+        title: const Text('เปลี่ยนรหัสผ่าน'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: const [
@@ -841,13 +962,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             child: const Text('ยกเลิก'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/authentication-screen',
-                (route) => false,
-              );
+              await _authService.signOut();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/ride-request-screen',
+                  (route) => false,
+                );
+              }
               HapticFeedback.lightImpact();
             },
             style: ElevatedButton.styleFrom(
@@ -864,7 +988,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
+        title: const Text('ลบบัญชี'),
         content: const Text(
           'คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีของคุณอย่างถาวร? การดำเนินการนี้ไม่สามารถยกเลิกได้',
         ),

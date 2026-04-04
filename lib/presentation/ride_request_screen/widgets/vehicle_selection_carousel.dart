@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../widgets/custom_icon_widget.dart';
+import '../../../widgets/custom_image_widget.dart';
 import './edit_vehicle_dialog.dart';
 
 class VehicleSelectionCarousel extends StatefulWidget {
@@ -25,63 +27,175 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
   late PageController _pageController;
   int _currentIndex = 0;
 
-  // Updated with Thai Baht prices
+  // Updated with real Rungroj Car Rental fleet — 12 vehicles, Thai Baht prices
   List<Map<String, dynamic>> _vehicles = [
     {
       "id": 1,
-      "type": "RungrojCarRental Standard",
-      "description": "Comfortable rides for everyday trips",
-      "image": "https://images.unsplash.com/photo-1726003514379-033ea2ef59f5",
-      "semanticLabel":
-          "Silver sedan car parked on city street with modern buildings in background",
-      "capacity": "4 passengers",
-      "estimatedArrival": "3 min",
-      "price": "฿437.50",
-      "pricePerMile": "฿73.50",
-      "features": ["Air Conditioning", "Music System", "Phone Charger"],
+      "type": "City Turbo",
+      "description": "รถเก๋งขนาดกลาง เหมาะสำหรับการเดินทางในเมือง",
+      "image":
+          "https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg",
+      "semanticLabel": "Silver city sedan car parked on urban street",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "3 นาที",
+      "price": "฿1,000/วัน",
+      "pricePerDay": 1000.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "ที่ชาร์จโทรศัพท์"],
       "available": true,
     },
     {
       "id": 2,
-      "type": "RungrojCarRental Premium",
-      "description": "Luxury vehicles with premium amenities",
-      "image": "https://images.unsplash.com/photo-1701985344392-f9b6b6768b14",
-      "semanticLabel":
-          "Black luxury sedan with tinted windows parked in front of modern glass building",
-      "capacity": "4 passengers",
-      "estimatedArrival": "5 min",
-      "price": "฿656.25",
-      "pricePerMile": "฿113.75",
-      "features": ["Leather Seats", "Wi-Fi", "Refreshments", "Premium Sound"],
+      "type": "New Yaris Sport",
+      "description": "รถเก๋งสปอร์ต ประหยัดน้ำมัน ขับสนุก",
+      "image":
+          "https://images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg",
+      "semanticLabel": "White compact sport hatchback car on road",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "4 นาที",
+      "price": "฿800/วัน",
+      "pricePerDay": 800.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "ประหยัดน้ำมัน"],
       "available": true,
     },
     {
       "id": 3,
-      "type": "RungrojCarRental XL",
-      "description": "Spacious SUVs for groups and luggage",
-      "image": "https://images.unsplash.com/photo-1616452647790-c14899d4982b",
-      "semanticLabel":
-          "White SUV parked on urban street with city skyline visible in background",
-      "capacity": "6 passengers",
-      "estimatedArrival": "4 min",
-      "price": "฿770.00",
-      "pricePerMile": "฿133.00",
-      "features": ["Extra Space", "Luggage Room", "Child Seats Available"],
+      "type": "New Yaris Ativ",
+      "description": "รถเก๋งซีดาน สะดวกสบาย เหมาะสำหรับครอบครัว",
+      "image":
+          "https://images.pexels.com/photos/3729464/pexels-photo-3729464.jpeg",
+      "semanticLabel": "White sedan car parked in parking lot",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "5 นาที",
+      "price": "฿1,000/วัน",
+      "pricePerDay": 1000.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "ที่ชาร์จโทรศัพท์"],
       "available": true,
     },
     {
       "id": 4,
-      "type": "RungrojCarRental Eco",
-      "description": "Environmentally friendly hybrid vehicles",
-      "image": "https://images.unsplash.com/photo-1502826114304-08437d996289",
-      "semanticLabel":
-          "Green hybrid car parked near trees with eco-friendly design elements visible",
-      "capacity": "4 passengers",
-      "estimatedArrival": "6 min",
-      "price": "฿358.75",
-      "pricePerMile": "฿64.75",
-      "features": ["Eco-Friendly", "Quiet Ride", "Low Emissions"],
-      "available": false,
+      "type": "Almera Sportech",
+      "description": "รถเก๋งสปอร์ตเทค ดีไซน์ทันสมัย",
+      "image":
+          "https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg",
+      "semanticLabel": "Gray sporty sedan car on city road",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "4 นาที",
+      "price": "฿800/วัน",
+      "pricePerDay": 800.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "ที่ชาร์จโทรศัพท์"],
+      "available": true,
+    },
+    {
+      "id": 5,
+      "type": "Ciaz",
+      "description": "รถเก๋งซีดานหรู กว้างขวาง นุ่มนวล",
+      "image":
+          "https://images.pexels.com/photos/210019/pexels-photo-210019.jpeg",
+      "semanticLabel": "Silver luxury sedan car parked on street",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "5 นาที",
+      "price": "฿800/วัน",
+      "pricePerDay": 800.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "เบาะหนัง"],
+      "available": true,
+    },
+    {
+      "id": 6,
+      "type": "Ranger Raptor",
+      "description": "กระบะสมรรถนะสูง แข็งแกร่ง เหมาะทุกเส้นทาง",
+      "image":
+          "https://images.pexels.com/photos/1638459/pexels-photo-1638459.jpeg",
+      "semanticLabel": "Black pickup truck on off-road terrain",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "6 นาที",
+      "price": "฿2,500/วัน",
+      "pricePerDay": 2500.0,
+      "features": ["4WD", "เครื่องปรับอากาศ", "ระบบเสียง"],
+      "available": true,
+    },
+    {
+      "id": 7,
+      "type": "Vigo Champ",
+      "description": "กระบะคลาสสิก ทนทาน เชื่อถือได้",
+      "image":
+          "https://images.pexels.com/photos/2533092/pexels-photo-2533092.jpeg",
+      "semanticLabel": "White pickup truck parked on dirt road",
+      "capacity": "4 ที่นั่ง",
+      "estimatedArrival": "5 นาที",
+      "price": "฿2,000/วัน",
+      "pricePerDay": 2000.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "ทนทาน"],
+      "available": true,
+    },
+    {
+      "id": 8,
+      "type": "Veloz",
+      "description": "MPV อเนกประสงค์ กว้างขวาง เหมาะครอบครัว",
+      "image":
+          "https://images.pexels.com/photos/1007410/pexels-photo-1007410.jpeg",
+      "semanticLabel": "Silver MPV minivan parked in suburban area",
+      "capacity": "7 ที่นั่ง",
+      "estimatedArrival": "4 นาที",
+      "price": "฿1,800/วัน",
+      "pricePerDay": 1800.0,
+      "features": ["เครื่องปรับอากาศ", "7 ที่นั่ง", "ระบบเสียง"],
+      "available": true,
+    },
+    {
+      "id": 9,
+      "type": "Pajero Sport Elite",
+      "description": "SUV พรีเมียม ทรงพลัง หรูหรา",
+      "image":
+          "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg",
+      "semanticLabel": "Black premium SUV on mountain road",
+      "capacity": "7 ที่นั่ง",
+      "estimatedArrival": "7 นาที",
+      "price": "฿2,200/วัน",
+      "pricePerDay": 2200.0,
+      "features": ["4WD", "เบาะหนัง", "ระบบเสียงพรีเมียม"],
+      "available": true,
+    },
+    {
+      "id": 10,
+      "type": "Cross",
+      "description": "SUV ขนาดกลาง ทันสมัย ประหยัดน้ำมัน",
+      "image":
+          "https://images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg",
+      "semanticLabel": "White crossover SUV on city road",
+      "capacity": "5 ที่นั่ง",
+      "estimatedArrival": "4 นาที",
+      "price": "฿1,800/วัน",
+      "pricePerDay": 1800.0,
+      "features": ["เครื่องปรับอากาศ", "ระบบเสียง", "ที่ชาร์จโทรศัพท์"],
+      "available": true,
+    },
+    {
+      "id": 11,
+      "type": "Xpander",
+      "description": "MPV อเนกประสงค์ ดีไซน์สปอร์ต",
+      "image":
+          "https://images.pexels.com/photos/3729464/pexels-photo-3729464.jpeg",
+      "semanticLabel": "Silver MPV crossover parked in urban area",
+      "capacity": "7 ที่นั่ง",
+      "estimatedArrival": "5 นาที",
+      "price": "฿1,800/วัน",
+      "pricePerDay": 1800.0,
+      "features": ["เครื่องปรับอากาศ", "7 ที่นั่ง", "ระบบเสียง"],
+      "available": true,
+    },
+    {
+      "id": 12,
+      "type": "MU-X",
+      "description": "SUV 7 ที่นั่ง ทรงพลัง เหมาะทุกเส้นทาง",
+      "image":
+          "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg",
+      "semanticLabel": "Dark gray large SUV on highway",
+      "capacity": "7 ที่นั่ง",
+      "estimatedArrival": "6 นาที",
+      "price": "฿1,990/วัน",
+      "pricePerDay": 1990.0,
+      "features": ["4WD", "เครื่องปรับอากาศ", "7 ที่นั่ง"],
+      "available": true,
     },
   ];
 
@@ -155,8 +269,12 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
     );
   }
 
-  Widget _buildVehicleCard(Map<String, dynamic> vehicle, bool isSelected,
-      ThemeData theme, int index) {
+  Widget _buildVehicleCard(
+    Map<String, dynamic> vehicle,
+    bool isSelected,
+    ThemeData theme,
+    int index,
+  ) {
     final isAvailable = vehicle["available"] as bool;
 
     return AnimatedContainer(
@@ -196,8 +314,9 @@ class _VehicleSelectionCarouselState extends State<VehicleSelectionCarousel> {
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.3),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.3,
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: const BorderRadius.only(

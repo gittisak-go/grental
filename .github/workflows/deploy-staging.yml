@@ -1,0 +1,110 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy'
+        required: false
+        default: 'Manual trigger'
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  ENVIRONMENT: staging
+
+jobs:
+  deploy-staging:
+    name: Deploy Migrations to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate environment secrets
+        run: |
+          echo "Validating staging environment secrets..."
+          if [ -z "${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}" ]; then
+            echo "ERROR: STAGING_SUPABASE_ACCESS_TOKEN is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.STAGING_SUPABASE_PROJECT_ID }}" ]; then
+            echo "ERROR: STAGING_SUPABASE_PROJECT_ID is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}" ]; then
+            echo "ERROR: STAGING_SUPABASE_DB_PASSWORD is not set"
+            exit 1
+          fi
+          echo "All required secrets are present."
+
+      - name: Link Supabase project (staging)
+        run: |
+          supabase link \
+            --project-ref ${{ secrets.STAGING_SUPABASE_PROJECT_ID }} \
+            --password ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+
+      - name: Check pending migrations
+        run: |
+          echo "Checking migration status..."
+          supabase db diff --use-migra 2>/dev/null || echo "Migration diff check complete."
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+        continue-on-error: true
+
+      - name: Push migrations to staging
+        run: |
+          echo "Pushing migrations to staging..."
+          supabase db push --password ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+
+      - name: Run seed data (staging only)
+        run: |
+          echo "Running seed data for staging..."
+          if [ -f "supabase/seed.sql" ]; then
+            supabase db execute \
+              --file supabase/seed.sql \
+              --password ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }} \
+              2>/dev/null || echo "Seed data already applied or skipped."
+          else
+            echo "No seed.sql found, skipping."
+          fi
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+        continue-on-error: true
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "=== Staging Deployment Successful ==="
+          echo "Branch: develop"
+          echo "Environment: staging"
+          echo "Project: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}"
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "=== Staging Deployment FAILED ==="
+          echo "Branch: develop"
+          echo "Commit: ${{ github.sha }}"
+          echo "Please check the logs above for details."
+          exit 1

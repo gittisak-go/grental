@@ -58,25 +58,25 @@ class CustomBottomBar extends StatelessWidget {
     BottomNavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
-      label: 'Home',
+      label: 'หน้าหลัก',
       route: '/ride-request-screen',
     ),
     BottomNavItem(
       icon: Icons.calendar_today_outlined,
       activeIcon: Icons.calendar_today_rounded,
-      label: 'Bookings',
+      label: 'การจอง',
       route: '/admin-reservations-screen',
     ),
     BottomNavItem(
       icon: Icons.directions_car_outlined,
       activeIcon: Icons.directions_car_rounded,
-      label: 'Fleet',
+      label: 'รถยนต์',
       route: '/fleet-inventory-screen',
     ),
     BottomNavItem(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
-      label: 'Profile',
+      label: 'โปรไฟล์',
       route: '/user-profile-screen',
     ),
   ];
@@ -86,13 +86,13 @@ class CustomBottomBar extends StatelessWidget {
     BottomNavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
-      label: 'Home',
+      label: 'หน้าหลัก',
       route: '/ride-request-screen',
     ),
     BottomNavItem(
       icon: Icons.location_on_outlined,
       activeIcon: Icons.location_on_rounded,
-      label: 'Track',
+      label: 'ติดตาม',
       route: '/live-tracking-screen',
     ),
   ];

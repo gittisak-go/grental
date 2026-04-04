@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' hide LatLng, Marker, MarkerId, InfoWindow, CameraPosition, MapType;
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_export.dart';
 import '../../../widgets/custom_icon_widget.dart';
+import '../../../widgets/dummy_map_widget.dart' hide LatLng, Marker;
 
 class MapPreviewWidget extends StatefulWidget {
   final String pickupLocation;
@@ -24,21 +25,8 @@ class MapPreviewWidget extends StatefulWidget {
 }
 
 class _MapPreviewWidgetState extends State<MapPreviewWidget> {
-  GoogleMapController? _mapController;
-
   // Rungroj Car Rental location - Udon Thani
-  static const gmaps.LatLng _businessLocation = gmaps.LatLng(17.3647, 102.8157);
-
-  Set<gmaps.Marker> get _markers => {
-    gmaps.Marker(
-      markerId: const gmaps.MarkerId('business'),
-      position: _businessLocation,
-      infoWindow: const gmaps.InfoWindow(
-        title: 'รถเช่าอุดรธานี รุ่งโรจน์คาร์เร้นท์',
-        snippet: '79QPF+QQM เชียงพิน เมืองอุดรธานี',
-      ),
-    ),
-  };
+  static const LatLng _businessLocation = LatLng(17.3647, 102.8157);
 
   Future<void> _openInGoogleMaps() async {
     final Uri url = Uri.parse('https://maps.app.goo.gl/n8XaHieccMdJ3VKH8');
@@ -68,33 +56,70 @@ class _MapPreviewWidgetState extends State<MapPreviewWidget> {
         borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
-            GoogleMap(
-              onMapCreated: (GoogleMapController controller) {
-                _mapController = controller;
-              },
-              initialCameraPosition: const gmaps.CameraPosition(
-                target: _businessLocation,
-                zoom: 16.0,
+            FlutterMap(
+              options: const MapOptions(
+                initialCenter: _businessLocation,
+                initialZoom: 16.0,
+                minZoom: 3.0,
+                maxZoom: 18.0,
+                interactionOptions: InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                ),
               ),
-              markers: _markers,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              myLocationButtonEnabled: false,
-              compassEnabled: false,
-              mapType: gmaps.MapType.normal,
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.rungrojcarrental.app',
+                  tileDisplay: const TileDisplay.fadeIn(),
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _businessLocation,
+                      width: 60,
+                      height: 60,
+                      alignment: Alignment.topCenter,
+                      child: GestureDetector(
+                        onTap: _openInGoogleMaps,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary
+                                        .withValues(alpha: 0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.directions_car,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             // Open in Maps button
             Positioned(
               top: 2.h,
               right: 4.w,
-              child: Column(
-                children: [
-                  _buildMapControl(
-                    icon: 'fullscreen',
-                    onTap: _openInGoogleMaps,
-                    theme: theme,
-                  ),
-                ],
+              child: _buildMapControl(
+                icon: 'fullscreen',
+                onTap: _openInGoogleMaps,
+                theme: theme,
               ),
             ),
             // Location info overlay
@@ -203,11 +228,5 @@ class _MapPreviewWidgetState extends State<MapPreviewWidget> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _mapController?.dispose();
-    super.dispose();
   }
 }

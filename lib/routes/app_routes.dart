@@ -19,9 +19,9 @@ import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/user_profile_screen/user_profile_screen.dart';
 import '../presentation/vehicle_management_screen/vehicle_management_screen.dart';
 import '../presentation/notification_preferences_screen/notification_preferences_screen.dart';
+import '../presentation/viewer_dashboard_screen/viewer_dashboard_screen.dart';
 
 class AppRoutes {
-  // TODO: Add your routes here
   static const String initial = '/';
   static const String rideRequest = '/ride-request-screen';
   static const String liveTracking = '/live-tracking-screen';
@@ -36,6 +36,7 @@ class AppRoutes {
   static const String adminReservations = '/admin-reservations-screen';
   static const String bankInfoScreen = '/bank-info-screen';
   static const String adminDashboardScreen = '/admin-dashboard-screen';
+  static const String viewerDashboardScreen = '/viewer-dashboard-screen';
   static const String driverManagementScreen = '/driver-management-screen';
   static const String fleetInventoryScreen = '/fleet-inventory-screen';
   static const String checkoutScreen = '/checkout-screen';
@@ -59,6 +60,7 @@ class AppRoutes {
     adminReservations: (context) => const AdminReservationsScreen(),
     bankInfoScreen: (context) => const BankInfoScreen(),
     adminDashboardScreen: (context) => const AdminDashboardScreen(),
+    viewerDashboardScreen: (context) => const ViewerDashboardScreen(),
     driverManagementScreen: (context) => const DriverManagementScreen(),
     fleetInventoryScreen: (context) => const FleetInventoryScreen(),
     checkoutScreen: (context) => const CheckoutScreen(),
@@ -66,6 +68,5 @@ class AppRoutes {
     aboutAppScreen: (context) => const AboutAppScreen(),
     notificationPreferencesScreen: (context) =>
         const NotificationPreferencesScreen(),
-    // TODO: Add your other routes here
   };
 }

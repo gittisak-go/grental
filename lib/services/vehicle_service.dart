@@ -20,7 +20,7 @@ class VehicleService {
           .map((json) => VehicleModel.fromJson(json))
           .toList();
     } catch (e) {
-      throw Exception('Failed to fetch vehicles: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลรถยนต์ได้: $e');
     }
   }
 
@@ -37,7 +37,7 @@ class VehicleService {
           .map((json) => VehicleModel.fromJson(json))
           .toList();
     } catch (e) {
-      throw Exception('Failed to fetch available vehicles: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลรถยนต์ที่พร้อมใช้งานได้: $e');
     }
   }
 
@@ -49,7 +49,7 @@ class VehicleService {
 
       return VehicleModel.fromJson(response);
     } catch (e) {
-      throw Exception('Failed to fetch vehicle: $e');
+      throw Exception('ไม่สามารถดึงข้อมูลรถยนต์ได้: $e');
     }
   }
 
@@ -64,7 +64,7 @@ class VehicleService {
 
       return VehicleModel.fromJson(response);
     } catch (e) {
-      throw Exception('Failed to add vehicle: $e');
+      throw Exception('ไม่สามารถเพิ่มรถยนต์ได้: $e');
     }
   }
 
@@ -83,7 +83,7 @@ class VehicleService {
 
       return VehicleModel.fromJson(response);
     } catch (e) {
-      throw Exception('Failed to update vehicle: $e');
+      throw Exception('ไม่สามารถอัปเดตข้อมูลรถยนต์ได้: $e');
     }
   }
 
@@ -92,7 +92,7 @@ class VehicleService {
     try {
       await _supabase.from('vehicles').delete().eq('id', id);
     } catch (e) {
-      throw Exception('Failed to delete vehicle: $e');
+      throw Exception('ไม่สามารถลบรถยนต์ได้: $e');
     }
   }
 
@@ -109,7 +109,7 @@ class VehicleService {
           .map((json) => VehicleModel.fromJson(json))
           .toList();
     } catch (e) {
-      throw Exception('Failed to search vehicles: $e');
+      throw Exception('ไม่สามารถค้นหารถยนต์ได้: $e');
     }
   }
 
@@ -126,7 +126,7 @@ class VehicleService {
           .map((json) => VehicleModel.fromJson(json))
           .toList();
     } catch (e) {
-      throw Exception('Failed to filter vehicles: $e');
+      throw Exception('ไม่สามารถกรองรถยนต์ตามยี่ห้อได้: $e');
     }
   }
 }

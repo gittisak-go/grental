@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_export.dart';
 import '../../models/reservation_model.dart';
@@ -19,17 +18,19 @@ import './widgets/quick_stats_row_widget.dart';
 import './widgets/revenue_trend_widget.dart';
 import './widgets/ride_pattern_chart_widget.dart';
 
-class AiAnalyticsDashboardScreen extends ConsumerStatefulWidget {
-  const AiAnalyticsDashboardScreen({Key? key}) : super(key: key);
+class AiAnalyticsDashboardScreen extends StatefulWidget {
+  const AiAnalyticsDashboardScreen({super.key});
 
   @override
-  ConsumerState<AiAnalyticsDashboardScreen> createState() =>
+  State<AiAnalyticsDashboardScreen> createState() =>
       _AiAnalyticsDashboardScreenState();
 }
 
-class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboardScreen> {
+class _AiAnalyticsDashboardScreenState
+    extends State<AiAnalyticsDashboardScreen> {
   final ReservationService _reservationService = ReservationService();
   final VehicleService _vehicleService = VehicleService();
+  late final ChatNotifier _chatNotifier;
 
   bool _isLoadingData = true;
   bool _isGeneratingInsights = false;
@@ -40,16 +41,32 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
   String _selectedPeriod = '7 Days';
   final List<String> _periods = ['Today', '7 Days', '30 Days', '90 Days'];
 
-  static const _chatConfig = ChatConfig(
-    provider: 'OPEN_AI',
-    model: 'gpt-4',
-    streaming: false,
-  );
-
   @override
   void initState() {
     super.initState();
+    _chatNotifier = ChatNotifier(
+      provider: 'OPEN_AI',
+      model: 'gpt-4',
+      streaming: false,
+    );
+    _chatNotifier.addListener(_onChatStateChanged);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _chatNotifier.removeListener(_onChatStateChanged);
+    _chatNotifier.dispose();
+    super.dispose();
+  }
+
+  void _onChatStateChanged() {
+    if (!_chatNotifier.state.isLoading &&
+        _chatNotifier.state.response.isNotEmpty &&
+        _isGeneratingInsights) {
+      _parseAiResponse(_chatNotifier.state.response);
+      setState(() => _isGeneratingInsights = false);
+    }
   }
 
   Future<void> _loadData() async {
@@ -88,11 +105,8 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
     ];
 
     try {
-      // Remove chatNotifierProvider call as it's not defined
-      // await ref
-      //     .read(chatNotifierProvider(_chatConfig).notifier)
-      //     .sendMessage(messages);
-      setState(() => _isGeneratingInsights = false);
+      _chatNotifier.clearResponse();
+      await _chatNotifier.sendMessage(messages);
     } catch (_) {
       setState(() => _isGeneratingInsights = false);
     }
@@ -105,7 +119,7 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
               r.status == ReservationStatus.completed ||
               r.status == ReservationStatus.confirmed,
         )
-        .fold(0.0, (sum, r) => sum + r.totalAmount.toDouble());
+        .fold(0.0, (sum, r) => sum + r.totalAmount);
     final activeVehicles = _vehicles.where((v) => !v.isAvailable).length;
     final completedRides = _reservations
         .where((r) => r.status == ReservationStatus.completed)
@@ -126,9 +140,8 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
         setState(() {
           _aiInsight = data['insight'] as String? ?? response;
           final recs = data['recommendations'] as List<dynamic>? ?? [];
-          _aiRecommendations = recs
-              .map((r) => r as Map<String, dynamic>)
-              .toList();
+          _aiRecommendations =
+              recs.map((r) => r as Map<String, dynamic>).toList();
         });
       } else {
         setState(() => _aiInsight = response);
@@ -162,7 +175,7 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
                 (r.status == ReservationStatus.completed ||
                     r.status == ReservationStatus.confirmed),
           )
-          .fold(0.0, (sum, r) => sum + r.totalAmount.toDouble());
+          .fold(0.0, (sum, r) => sum + r.totalAmount);
       return {'day': DateFormat('EEE').format(day), 'amount': dayRevenue};
     });
   }
@@ -173,7 +186,7 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
             r.status == ReservationStatus.completed ||
             r.status == ReservationStatus.confirmed,
       )
-      .fold(0.0, (sum, r) => sum + r.totalAmount.toDouble());
+      .fold(0.0, (sum, r) => sum + r.totalAmount);
 
   double get _revenueGrowth {
     final data = _revenueData;
@@ -229,7 +242,7 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Applying: $title',
+          'กำลังดำเนินการ: $title',
           style: GoogleFonts.inter(color: Colors.white),
         ),
         backgroundColor: const Color(0xFFE91E63),
@@ -246,7 +259,7 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Generating AI-powered report...',
+          'กำลังสร้างรายงาน AI...',
           style: GoogleFonts.inter(color: Colors.white),
         ),
         backgroundColor: const Color(0xFF5856D6),
@@ -261,18 +274,6 @@ class _AiAnalyticsDashboardScreenState extends ConsumerState<AiAnalyticsDashboar
 
   @override
   Widget build(BuildContext context) {
-    // Remove ref.watch line
-    // final chatState = ref.watch(chatNotifierProvider(_chatConfig));
-
-    // if (!chatState.isLoading &&
-    //     chatState.response.isNotEmpty &&
-    //     _isGeneratingInsights) {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     _parseAiResponse(chatState.response);
-    //     setState(() => _isGeneratingInsights = false);
-    //   });
-    // }
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
       appBar: _buildAppBar(),

@@ -4,6 +4,7 @@ import 'package:sizer/sizer.dart';
 
 import '../../../models/fleet_vehicle_model.dart';
 import '../../../services/fleet_service.dart';
+import '../../../routes/app_routes.dart';
 
 class VehicleDetailsModal extends StatefulWidget {
   final FleetVehicleModel vehicle;
@@ -306,6 +307,42 @@ class _VehicleDetailsModalState extends State<VehicleDetailsModal> {
                     SizedBox(height: 2.h),
                     Row(
                       children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.checkoutScreen,
+                                arguments: {
+                                  'id': widget.vehicle.id,
+                                  'brand': widget.vehicle.brand,
+                                  'model': widget.vehicle.model,
+                                  'year': widget.vehicle.year,
+                                  'seats': widget.vehicle.seats,
+                                  'transmission': widget.vehicle.transmission,
+                                  'fuelType': widget.vehicle.fuelType,
+                                  'imageUrl': widget.vehicle.imageUrl,
+                                  'licenseplate': widget.vehicle.licenseplate,
+                                  'dailyRate': widget.vehicle.pricePerDay,
+                                  'isAvailable':
+                                      widget.vehicle.status == 'available',
+                                },
+                              );
+                            },
+                            icon: Icon(Icons.book_online),
+                            label: Text('จองรถนี้'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.pink,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 2.w),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () {

@@ -3,11 +3,12 @@ import 'package:sizer/sizer.dart';
 
 import '../../models/vehicle_model.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/magic_link_auth_service.dart';
 import './widgets/add_edit_vehicle_dialog.dart';
 import './widgets/vehicle_card_widget.dart';
 
 class VehicleManagementScreen extends StatefulWidget {
-  const VehicleManagementScreen({Key? key}) : super(key: key);
+  const VehicleManagementScreen({super.key});
 
   @override
   State<VehicleManagementScreen> createState() =>
@@ -20,12 +21,26 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
   List<VehicleModel> _filteredVehicles = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  String _selectedFilter = 'All';
+  String _selectedFilter = 'ทั้งหมด';
 
   @override
   void initState() {
     super.initState();
+    _checkAdminAccess();
     _loadVehicles();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    final authService = MagicLinkAuthService();
+    if (!authService.isCurrentUserSuperAdmin) {
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/ride-request-screen',
+          (route) => false,
+        );
+      }
+    }
   }
 
   Future<void> _loadVehicles() async {
@@ -100,7 +115,8 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       builder: (context) => AlertDialog(
         title: const Text('ลบรถยนต์'),
         content: Text(
-            'คุณแน่ใจหรือไม่ว่าต้องการลบ ${vehicle.brand} ${vehicle.model}?'),
+          'คุณแน่ใจหรือไม่ว่าต้องการลบ ${vehicle.brand} ${vehicle.model}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -152,10 +168,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       appBar: AppBar(
         title: Text(
           'จัดการรถยนต์',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
@@ -166,10 +179,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadVehicles,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadVehicles),
         ],
       ),
       body: Column(
@@ -212,18 +222,19 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: ['ทั้งหมด', 'ว่าง', 'ไม่ว่าง']
-                              .map((filter) => Padding(
-                                    padding: EdgeInsets.only(right: 2.w),
-                                    child: FilterChip(
-                                      label: Text(filter),
-                                      selected: _selectedFilter == filter,
-                                      onSelected: (selected) {
-                                        setState(
-                                            () => _selectedFilter = filter);
-                                        _filterVehicles();
-                                      },
-                                    ),
-                                  ))
+                              .map(
+                                (filter) => Padding(
+                                  padding: EdgeInsets.only(right: 2.w),
+                                  child: FilterChip(
+                                    label: Text(filter),
+                                    selected: _selectedFilter == filter,
+                                    onSelected: (selected) {
+                                      setState(() => _selectedFilter = filter);
+                                      _filterVehicles();
+                                    },
+                                  ),
+                                ),
+                              )
                               .toList(),
                         ),
                       ),
@@ -251,9 +262,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                             Text(
                               'ไม่พบรถยนต์',
                               style: TextStyle(
-                                fontSize: 16.sp,
-                                color: Colors.grey,
-                              ),
+                                  fontSize: 16.sp, color: Colors.grey),
                             ),
                           ],
                         ),

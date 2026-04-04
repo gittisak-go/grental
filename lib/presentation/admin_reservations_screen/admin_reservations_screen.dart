@@ -5,12 +5,13 @@ import '../../models/reservation_model.dart';
 import '../../models/vehicle_model.dart';
 import '../../services/reservation_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/magic_link_auth_service.dart';
 import './widgets/reservation_card_widget.dart';
 import './widgets/reservation_details_dialog.dart';
 import './widgets/reservation_filter_sheet.dart';
 
 class AdminReservationsScreen extends StatefulWidget {
-  const AdminReservationsScreen({Key? key}) : super(key: key);
+  const AdminReservationsScreen({super.key});
 
   @override
   State<AdminReservationsScreen> createState() =>
@@ -31,7 +32,21 @@ class _AdminReservationsScreenState extends State<AdminReservationsScreen> {
   @override
   void initState() {
     super.initState();
+    _checkAdminAccess();
     _loadData();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    final authService = MagicLinkAuthService();
+    if (!authService.isCurrentUserSuperAdmin) {
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/ride-request-screen',
+          (route) => false,
+        );
+      }
+    }
   }
 
   Future<void> _loadData() async {

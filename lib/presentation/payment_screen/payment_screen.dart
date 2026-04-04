@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../models/reservation_model.dart';
+import '../../services/reservation_service.dart';
+import '../../services/supabase_service.dart';
 import './widgets/fare_breakdown_card.dart';
 import './widgets/payment_method_card.dart';
 import './widgets/promo_code_widget.dart';
@@ -27,31 +30,29 @@ class _PaymentScreenState extends State<PaymentScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Mock data for ride details
-  final Map<String, dynamic> rideDetails = {
-    'pickup': '123 ถนนหลัก ใจกลางเมือง',
-    'destination': '456 ถนนโอ๊ค เขตอัพทาวน์',
-    'duration': '18 นาที',
-    'distance': '5.2 กม.',
-    'driverName': 'Michael Rodriguez',
-    'vehicleInfo': 'Toyota Camry • ABC-1234',
-    'rideId': 'TXH-2025-001847',
+  // Ride details loaded from route arguments or Supabase
+  Map<String, dynamic> rideDetails = {
+    'pickup': '-',
+    'destination': '-',
+    'duration': '-',
+    'distance': '-',
+    'driverName': '-',
+    'vehicleInfo': '-',
+    'rideId': '-',
+    'reservationId': null,
   };
 
-  // Mock data for fare breakdown
   Map<String, dynamic> fareDetails = {
     'breakdown': [
-      {'label': 'ค่าเช่าพื้นฐาน', 'amount': '฿170', 'isTotal': false},
-      {'label': 'ค่าเวลา', 'amount': '฿84', 'isTotal': false},
-      {'label': 'ค่าระยะทาง', 'amount': '฿136', 'isTotal': false},
-      {'label': 'ค่าบริการ', 'amount': '฿50', 'isTotal': false},
+      {'label': 'ค่าเช่าพื้นฐาน', 'amount': '฿0', 'isTotal': false},
     ],
-    'subtotal': '฿440',
-    'total': '฿440',
+    'subtotal': '฿0',
+    'total': '฿0',
     'discount': null,
   };
 
-  // Mock payment methods
+  double _baseAmount = 0.0;
+
   final List<Map<String, dynamic>> paymentMethods = [
     {
       'id': 1,
@@ -98,6 +99,105 @@ class _PaymentScreenState extends State<PaymentScreen>
       curve: Curves.easeInOut,
     ));
     _animationController.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadRideDetails();
+  }
+
+  Future<void> _loadRideDetails() async {
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    if (args is Map<String, dynamic>) {
+      // Load from passed arguments
+      final reservationId = args['reservationId'] as String?;
+      if (reservationId != null) {
+        await _loadFromSupabase(reservationId);
+        return;
+      }
+      // Use passed data directly
+      setState(() {
+        rideDetails = {
+          'pickup': args['pickup'] ?? '-',
+          'destination': args['destination'] ?? '-',
+          'duration': args['duration'] ?? '-',
+          'distance': args['distance'] ?? '-',
+          'driverName': args['driverName'] ?? '-',
+          'vehicleInfo': args['vehicleInfo'] ?? '-',
+          'rideId': args['rideId'] ?? '-',
+          'reservationId': args['reservationId'],
+        };
+        _baseAmount = (args['totalAmount'] as num?)?.toDouble() ?? 0.0;
+        _updateFareDetails();
+      });
+    } else {
+      // Try to load latest reservation from Supabase
+      await _loadLatestReservation();
+    }
+  }
+
+  Future<void> _loadFromSupabase(String reservationId) async {
+    try {
+      final service = ReservationService();
+      final reservation = await service.getReservationById(reservationId);
+      _applyReservationData(reservation);
+    } catch (_) {}
+  }
+
+  Future<void> _loadLatestReservation() async {
+    try {
+      final user = SupabaseService.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      final response = await SupabaseService.instance.client
+          .from('reservations')
+          .select('*')
+          .eq('customer_email', user.email ?? '')
+          .inFilter('status', ['confirmed', 'active', 'pending'])
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null) {
+        final reservation = ReservationModel.fromJson(response);
+        _applyReservationData(reservation);
+      }
+    } catch (_) {}
+  }
+
+  void _applyReservationData(ReservationModel reservation) {
+    if (!mounted) return;
+    setState(() {
+      rideDetails = {
+        'pickup': reservation.pickupLocation ?? '-',
+        'destination': reservation.dropoffLocation ?? '-',
+        'duration': '-',
+        'distance': '-',
+        'driverName': '-',
+        'vehicleInfo': reservation.vehicleId ?? '-',
+        'rideId': reservation.id ?? '-',
+        'reservationId': reservation.id,
+      };
+      _baseAmount = reservation.totalAmount;
+      _updateFareDetails();
+    });
+  }
+
+  void _updateFareDetails() {
+    fareDetails = {
+      'breakdown': [
+        {
+          'label': 'ค่าเช่าพื้นฐาน',
+          'amount': '฿${_baseAmount.toStringAsFixed(0)}',
+          'isTotal': false
+        },
+      ],
+      'subtotal': '฿${_baseAmount.toStringAsFixed(0)}',
+      'total': '฿${_baseAmount.toStringAsFixed(0)}',
+      'discount': null,
+    };
   }
 
   @override
@@ -358,8 +458,7 @@ class _PaymentScreenState extends State<PaymentScreen>
   }
 
   double _calculateTotalAmount() {
-    double baseAmount = 440.00; // Base fare from fareDetails
-    double total = baseAmount + tipAmount - discountAmount;
+    double total = _baseAmount + tipAmount - discountAmount;
     return total > 0 ? total : 0;
   }
 
@@ -377,15 +476,24 @@ class _PaymentScreenState extends State<PaymentScreen>
 
     HapticFeedback.mediumImpact();
 
-    // Simulate payment processing
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Update reservation status to completed if we have a reservation ID
+      final reservationId = rideDetails['reservationId'] as String?;
+      if (reservationId != null) {
+        final service = ReservationService();
+        await service.updateReservationStatus(
+          reservationId,
+          ReservationStatus.completed,
+        );
+      }
+    } catch (_) {}
+
+    await Future.delayed(const Duration(seconds: 1));
 
     if (mounted) {
       setState(() {
         isProcessingPayment = false;
       });
-
-      // Show success and navigate
       _showPaymentSuccess();
     }
   }

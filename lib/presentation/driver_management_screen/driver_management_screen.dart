@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../services/magic_link_auth_service.dart';
 import './widgets/driver_card_widget.dart';
 import './widgets/driver_details_modal.dart';
 import './widgets/driver_filter_sheet.dart';
 
 class DriverManagementScreen extends StatefulWidget {
-  const DriverManagementScreen({Key? key}) : super(key: key);
+  const DriverManagementScreen({super.key});
 
   @override
   State<DriverManagementScreen> createState() => _DriverManagementScreenState();
@@ -136,6 +137,25 @@ class _DriverManagementScreenState extends State<DriverManagementScreen> {
       }
     }
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminAccess();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    final authService = MagicLinkAuthService();
+    if (!authService.isCurrentUserSuperAdmin) {
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/ride-request-screen',
+          (route) => false,
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {

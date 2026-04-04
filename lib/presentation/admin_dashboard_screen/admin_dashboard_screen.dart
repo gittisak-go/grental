@@ -11,6 +11,7 @@ import '../../routes/app_routes.dart';
 import '../../services/reservation_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/magic_link_auth_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -40,8 +41,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _checkAdminAccess();
     _loadDashboardData();
     _setupRealtimeSubscriptions();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    final authService = MagicLinkAuthService();
+    if (!authService.isCurrentUserSuperAdmin) {
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/ride-request-screen',
+          (route) => false,
+        );
+      }
+    }
   }
 
   @override
@@ -56,38 +71,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       // Subscribe to reservations table changes
       _reservationsSubscription = _supabaseService.client
           .from('reservations')
-          .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
-        if (mounted) {
-          setState(() {
-            _allReservations =
-                data.map((json) => ReservationModel.fromJson(json)).toList();
-          });
-        }
-      }, onError: (error) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
-          });
-        }
-      });
+          .stream(primaryKey: ['id']).listen(
+        (List<Map<String, dynamic>> data) {
+          if (mounted) {
+            setState(() {
+              _allReservations =
+                  data.map((json) => ReservationModel.fromJson(json)).toList();
+            });
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
+            });
+          }
+        },
+      );
 
       // Subscribe to vehicles table changes
       _vehiclesSubscription = _supabaseService.client
           .from('vehicles')
-          .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
-        if (mounted) {
-          setState(() {
-            _allVehicles =
-                data.map((json) => VehicleModel.fromJson(json)).toList();
-          });
-        }
-      }, onError: (error) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
-          });
-        }
-      });
+          .stream(primaryKey: ['id']).listen(
+        (List<Map<String, dynamic>> data) {
+          if (mounted) {
+            setState(() {
+              _allVehicles =
+                  data.map((json) => VehicleModel.fromJson(json)).toList();
+            });
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
+            });
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -132,11 +153,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   double get _totalRevenue {
     return _allReservations
-        .where((r) =>
-            r.status == ReservationStatus.completed ||
-            r.status == ReservationStatus.confirmed ||
-            r.status == ReservationStatus.active)
-        .fold(0.0, (sum, r) => sum + (r.totalAmount.toDouble() ?? 0.0));
+        .where(
+          (r) =>
+              r.status == ReservationStatus.completed ||
+              r.status == ReservationStatus.confirmed ||
+              r.status == ReservationStatus.active,
+        )
+        .fold(0.0, (sum, r) => sum + r.totalAmount);
   }
 
   double get _vehicleUtilizationRate {
@@ -147,9 +170,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   int get _activeCustomersCount {
     return _allReservations
-        .where((r) =>
-            r.status == ReservationStatus.active ||
-            r.status == ReservationStatus.confirmed)
+        .where(
+          (r) =>
+              r.status == ReservationStatus.active ||
+              r.status == ReservationStatus.confirmed,
+        )
         .map((r) => r.customerEmail)
         .toSet()
         .length;
@@ -221,8 +246,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onPressed: _loadDashboardData,
           ),
           IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.pink),
-            onPressed: () {},
+            icon: const Icon(Icons.logout, color: Colors.pink),
+            tooltip: 'ออกจากระบบ',
+            onPressed: _showLogoutDialog,
           ),
         ],
       ),
@@ -414,10 +440,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -476,10 +499,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   drawVerticalLine: false,
                   horizontalInterval: 1000,
                   getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey[200]!,
-                      strokeWidth: 1,
-                    );
+                    return FlLine(color: Colors.grey[200]!, strokeWidth: 1);
                   },
                 ),
                 titlesData: FlTitlesData(
@@ -491,7 +511,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         return Text(
                           days[value.toInt() % 7],
                           style: TextStyle(
-                              fontSize: 10.sp, color: Colors.grey[600]),
+                            fontSize: 10.sp,
+                            color: Colors.grey[600],
+                          ),
                         );
                       },
                     ),
@@ -504,15 +526,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         return Text(
                           '${(value / 1000).toInt()}K',
                           style: TextStyle(
-                              fontSize: 10.sp, color: Colors.grey[600]),
+                            fontSize: 10.sp,
+                            color: Colors.grey[600],
+                          ),
                         );
                       },
                     ),
                   ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
@@ -559,7 +585,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             (r.status == ReservationStatus.completed ||
                 r.status == ReservationStatus.confirmed ||
                 r.status == ReservationStatus.active);
-      }).fold(0.0, (sum, r) => sum + (r.totalAmount.toDouble() ?? 0.0));
+      }).fold(0.0, (sum, r) => sum + r.totalAmount);
       spots.add(FlSpot(i.toDouble(), dayRevenue));
     }
     return spots;
@@ -718,7 +744,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildCustomerMetricItem(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: EdgeInsets.all(3.w),
       margin: EdgeInsets.symmetric(horizontal: 1.w),
@@ -740,10 +770,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10.sp,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 10.sp, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -819,8 +846,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     padding: EdgeInsets.symmetric(vertical: 3.h),
                     child: Column(
                       children: [
-                        Icon(Icons.event_busy,
-                            size: 48, color: Colors.grey[300]),
+                        Icon(
+                          Icons.event_busy,
+                          size: 48,
+                          color: Colors.grey[300],
+                        ),
                         SizedBox(height: 1.h),
                         Text(
                           'ยังไม่มีการจอง',
@@ -862,12 +892,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         backgroundColor: _getStatusColor(
-                                reservation.status.toString().split('.').last)
-                            .withAlpha(51),
+                          reservation.status.toString().split('.').last,
+                        ).withAlpha(51),
                         child: Icon(
                           Icons.directions_car,
                           color: _getStatusColor(
-                              reservation.status.toString().split('.').last),
+                            reservation.status.toString().split('.').last,
+                          ),
                         ),
                       ),
                       title: Text(
@@ -879,8 +910,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       subtitle: Text(
                         '${vehicle.brand} ${vehicle.model} • ${DateFormat('dd MMM yyyy', 'th').format(reservation.startDate)}',
-                        style:
-                            TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: Colors.grey[600],
+                        ),
                       ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -896,26 +929,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                           Container(
                             padding: EdgeInsets.symmetric(
-                                horizontal: 2.w, vertical: 0.3.h),
+                              horizontal: 2.w,
+                              vertical: 0.3.h,
+                            ),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(reservation.status
-                                      .toString()
-                                      .split('.')
-                                      .last)
-                                  .withAlpha(26),
+                              color: _getStatusColor(
+                                reservation.status.toString().split('.').last,
+                              ).withAlpha(26),
                               borderRadius: BorderRadius.circular(8.0),
                             ),
                             child: Text(
-                              _getStatusText(reservation.status
-                                  .toString()
-                                  .split('.')
-                                  .last),
+                              _getStatusText(
+                                reservation.status.toString().split('.').last,
+                              ),
                               style: TextStyle(
                                 fontSize: 9.sp,
-                                color: _getStatusColor(reservation.status
-                                    .toString()
-                                    .split('.')
-                                    .last),
+                                color: _getStatusColor(
+                                  reservation.status.toString().split('.').last,
+                                ),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1083,5 +1114,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
       await _loadDashboardData();
     }
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ออกจากระบบ'),
+        content: const Text('คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await MagicLinkAuthService().signOut();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/ride-request-screen',
+                  (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+            child:
+                const Text('ออกจากระบบ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -6,27 +6,39 @@ class MagicLinkAuthService {
 
   // Super_Admin emails - single source of truth
   static const List<String> superAdminEmails = [
-    'gittisakwannakeeree@gmail.com',
-    'info@gtsalphamcp.com',
-    'director@gtsalphamcp.com',
     'phongwut.w@gmail.com',
+    'gittisakwannakeeree@gmail.com',
   ];
+
+  // Admin emails
+  static const List<String> adminEmails = ['nongsandyza@gmail.com'];
+
+  // User emails (known users)
+  static const List<String> knownUserEmails = ['mtdzfc@gmail.com'];
 
   /// Check if an email belongs to Super_Admin role
   static bool isSuperAdmin(String email) {
     return superAdminEmails.contains(email.toLowerCase().trim());
   }
 
+  /// Check if an email belongs to Admin role
+  static bool isAdmin(String email) {
+    return adminEmails.contains(email.toLowerCase().trim());
+  }
+
   /// Determine role from email (client-side, for UI preview only)
   static String getUserRole(String email) {
-    if (isSuperAdmin(email.toLowerCase().trim())) {
+    final normalizedEmail = email.toLowerCase().trim();
+    if (isSuperAdmin(normalizedEmail)) {
       return 'Super_Admin';
+    }
+    if (isAdmin(normalizedEmail)) {
+      return 'Admin';
     }
     return 'User';
   }
 
   /// Send Magic Link to email
-  /// Non-Super_Admin emails get User role assigned automatically after login
   Future<void> sendMagicLink(String email) async {
     await _client.auth.signInWithOtp(
       email: email.toLowerCase().trim(),
@@ -35,7 +47,6 @@ class MagicLinkAuthService {
   }
 
   /// Upsert user profile with role after successful Magic Link authentication
-  /// Called after auth state changes to SIGNED_IN
   Future<String> upsertUserRole() async {
     final user = _client.auth.currentUser;
     if (user == null) return 'Visitor';
@@ -89,6 +100,13 @@ class MagicLinkAuthService {
     final email = currentUser?.email;
     if (email == null) return false;
     return isSuperAdmin(email);
+  }
+
+  /// Check if current user is Admin or Super_Admin
+  bool get isCurrentUserAdmin {
+    final email = currentUser?.email;
+    if (email == null) return false;
+    return isSuperAdmin(email) || isAdmin(email);
   }
 
   /// Get current user role (client-side, synchronous)

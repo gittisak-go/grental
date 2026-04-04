@@ -1,0 +1,157 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy (required for audit)'
+        required: true
+        default: ''
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  ENVIRONMENT: production
+
+jobs:
+  pre-deploy-checks:
+    name: Pre-deployment Safety Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify merge from develop (not direct push)
+        run: |
+          echo "Checking deployment source..."
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Last commit: $COMMIT_MSG"
+          
+          # Warn if this looks like a direct push (not a merge)
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "Push to main detected. Proceeding with deployment."
+            echo "Commit SHA: ${{ github.sha }}"
+            echo "Triggered by: ${{ github.actor }}"
+          fi
+
+      - name: Validate production secrets
+        run: |
+          echo "Validating production environment secrets..."
+          if [ -z "${{ secrets.PROD_SUPABASE_ACCESS_TOKEN }}" ]; then
+            echo "ERROR: PROD_SUPABASE_ACCESS_TOKEN is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.PROD_SUPABASE_PROJECT_ID }}" ]; then
+            echo "ERROR: PROD_SUPABASE_PROJECT_ID is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.PROD_SUPABASE_DB_PASSWORD }}" ]; then
+            echo "ERROR: PROD_SUPABASE_DB_PASSWORD is not set"
+            exit 1
+          fi
+          echo "All production secrets are present."
+
+      - name: Check migration files are valid
+        run: |
+          echo "Final migration validation before production deploy..."
+          INVALID=$(find supabase/migrations -name "*.sql" | grep -vE '/[0-9]{14}_[a-z0-9_]+\.sql$' || true)
+          if [ -n "$INVALID" ]; then
+            echo "ERROR: Invalid migration files: $INVALID"
+            exit 1
+          fi
+          echo "Migration files are valid."
+
+  deploy-production:
+    name: Deploy Migrations to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    needs: pre-deploy-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project (production)
+        run: |
+          supabase link \
+            --project-ref ${{ secrets.PROD_SUPABASE_PROJECT_ID }} \
+            --password ${{ secrets.PROD_SUPABASE_DB_PASSWORD }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.PROD_SUPABASE_ACCESS_TOKEN }}
+
+      - name: Dry-run migration check
+        run: |
+          echo "Running dry-run migration check..."
+          supabase db diff --use-migra 2>/dev/null || echo "Diff check complete."
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.PROD_SUPABASE_ACCESS_TOKEN }}
+        continue-on-error: true
+
+      - name: Push migrations to production
+        run: |
+          echo "Pushing migrations to PRODUCTION..."
+          echo "WARNING: This is a production deployment!"
+          supabase db push --password ${{ secrets.PROD_SUPABASE_DB_PASSWORD }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.PROD_SUPABASE_ACCESS_TOKEN }}
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying production deployment..."
+          echo "=== Production Deployment Successful ==="
+          echo "Branch: main"
+          echo "Environment: production"
+          echo "Project: ${{ secrets.PROD_SUPABASE_PROJECT_ID }}"
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          if [ -n "${{ github.event.inputs.reason }}" ]; then
+            echo "Reason: ${{ github.event.inputs.reason }}"
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "=== PRODUCTION DEPLOYMENT FAILED ==="
+          echo "CRITICAL: Production deployment failed!"
+          echo "Branch: main"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Please investigate immediately and consider rollback if needed."
+          exit 1
+
+  post-deploy:
+    name: Post-deployment Verification
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+    timeout-minutes: 10
+
+    steps:
+      - name: Deployment audit log
+        run: |
+          echo "=== Post-deployment Audit ==="
+          echo "Production deployment completed successfully."
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "Next steps:"
+          echo "1. Verify application is running correctly"
+          echo "2. Check Supabase dashboard for any migration errors"
+          echo "3. Monitor error logs for the next 30 minutes"

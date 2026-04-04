@@ -94,8 +94,10 @@ class AboutAppScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 1.h),
                   Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 3.w,
+                      vertical: 0.5.h,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(51),
                       borderRadius: BorderRadius.circular(20.0),
@@ -223,16 +225,23 @@ class AboutAppScreen extends StatelessWidget {
                   _buildContactItem(
                     context,
                     icon: 'location_on',
-                    title: 'ที่อยู่',
+                    title: 'ที่อยู่สำนักงานใหญ่',
                     value:
-                        '79QPF+QQM เชียงพิณ อำเภอเมืองอุดรธานี อุดรธานี 41000',
+                        '12/6 ตำบลหมูม่น อำเภอเมืองอุดรธานี จังหวัดอุดรธานี 41000',
+                    onTap: () => _launchMaps(),
+                  ),
+                  _buildContactItem(
+                    context,
+                    icon: 'flight',
+                    title: 'สาขาสนามบิน',
+                    value: '25/25 หมู่ 3 ตำบลหมากแข้ง อำเภอเมืองอุดรธานี 41000',
                     onTap: () => _launchMaps(),
                   ),
                   _buildContactItem(
                     context,
                     icon: 'phone',
                     title: 'โทรศัพท์',
-                    value: '086 634 8619',
+                    value: '086-634-8619',
                     onTap: () => _launchPhone('0866348619'),
                   ),
                   _buildContactItem(
@@ -270,21 +279,56 @@ class AboutAppScreen extends StatelessWidget {
                         icon: 'facebook',
                         label: 'Facebook',
                         color: const Color(0xFF1877F2),
-                        onTap: () => _launchURL('https://facebook.com'),
+                        onTap: () => _launchURL(
+                          'https://www.facebook.com/RungrojCarRental/',
+                        ),
                       ),
                       _buildSocialButton(
                         context,
                         icon: 'chat',
-                        label: 'Line',
+                        label: 'LINE',
                         color: const Color(0xFF00B900),
-                        onTap: () => _launchURL('https://line.me'),
+                        onTap: () => _launchURL('https://page.line.me/rungroj'),
                       ),
                       _buildSocialButton(
                         context,
-                        icon: 'chat',
-                        label: 'WhatsApp',
-                        color: const Color(0xFF25D366),
-                        onTap: () => _launchURL('https://wa.me/66866348619'),
+                        icon: 'play_circle',
+                        label: 'YouTube',
+                        color: const Color(0xFFFF0000),
+                        onTap: () => _launchURL(
+                          'https://www.youtube.com/@RungrojCarRental',
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 2.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildSocialButton(
+                        context,
+                        icon: 'alternate_email',
+                        label: 'Twitter/X',
+                        color: Colors.black,
+                        onTap: () => _launchURL(
+                          'https://twitter.com/rungrojcarrentudon',
+                        ),
+                      ),
+                      _buildSocialButton(
+                        context,
+                        icon: 'music_note',
+                        label: 'TikTok',
+                        color: Colors.black87,
+                        onTap: () => _launchURL(
+                          'https://www.tiktok.com/@RungrojCarRental',
+                        ),
+                      ),
+                      _buildSocialButton(
+                        context,
+                        icon: 'phone',
+                        label: 'โทร',
+                        color: Colors.green,
+                        onTap: () => _launchPhone('0866348619'),
                       ),
                     ],
                   ),
@@ -494,11 +538,7 @@ class AboutAppScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            CustomIconWidget(
-              iconName: icon,
-              color: color,
-              size: 8.w,
-            ),
+            CustomIconWidget(iconName: icon, color: color, size: 8.w),
             SizedBox(height: 0.8.h),
             Text(
               label,
