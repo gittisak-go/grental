@@ -4,11 +4,9 @@ import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
-import '../../routes/app_routes.dart';
 import '../../services/magic_link_auth_service.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
 import '../authentication_screen/widgets/neumorphic_auth_modal.dart';
 import './widgets/fare_estimation_widget.dart';
 import './widgets/promo_banner_widget.dart';

@@ -117,6 +117,8 @@ class PaymentMethodCard extends StatelessWidget {
     switch (type.toLowerCase()) {
       case 'card':
         return 'credit_card';
+      case 'bank_transfer':
+        return 'account_balance';
       case 'apple_pay':
         return 'apple';
       case 'google_pay':

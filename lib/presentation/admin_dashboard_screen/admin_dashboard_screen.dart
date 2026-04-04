@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
 import 'dart:async';
@@ -7,7 +6,6 @@ import 'dart:async';
 import '../../core/app_export.dart';
 import '../../models/car_model.dart';
 import '../../models/booking_payment_model.dart';
-import '../../routes/app_routes.dart';
 import '../../services/booking_service.dart';
 import '../../services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

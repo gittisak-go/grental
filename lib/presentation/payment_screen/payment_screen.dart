@@ -63,20 +63,27 @@ class _PaymentScreenState extends State<PaymentScreen>
     },
     {
       'id': 2,
+      'type': 'bank_transfer',
+      'name': 'โอนเงินผ่านธนาคาร',
+      'details': 'กสิกรไทย เลขที่ 020282488558',
+      'isDefault': false,
+    },
+    {
+      'id': 3,
       'type': 'apple_pay',
       'name': 'Apple Pay',
       'details': 'Touch ID หรือ Face ID',
       'isDefault': false,
     },
     {
-      'id': 3,
+      'id': 4,
       'type': 'google_pay',
       'name': 'Google Pay',
       'details': 'ลายนิ้วมือหรือ PIN',
       'isDefault': false,
     },
     {
-      'id': 4,
+      'id': 5,
       'type': 'cash',
       'name': 'เงินสด',
       'details': 'ชำระให้คนขับโดยตรง',
@@ -255,6 +262,9 @@ class _PaymentScreenState extends State<PaymentScreen>
                     RideSummaryCard(rideDetails: rideDetails),
                     FareBreakdownCard(fareDetails: fareDetails),
                     _buildPaymentMethodsSection(),
+                    if (paymentMethods[selectedPaymentMethodIndex]['type'] ==
+                        'bank_transfer')
+                      _buildBankTransferDetails(),
                     TipSelectionWidget(
                       onTipChanged: (tip) {
                         setState(() {
@@ -339,6 +349,109 @@ class _PaymentScreenState extends State<PaymentScreen>
               },
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBankTransferDetails() {
+    final theme = Theme.of(context);
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CustomIconWidget(
+                iconName: 'account_balance',
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              SizedBox(width: 2.w),
+              Text(
+                'ข้อมูลบัญชีธนาคาร',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 1.5.h),
+          _buildBankInfoRow(theme, 'ธนาคาร', 'กสิกรไทย (KBank)'),
+          _buildBankInfoRow(theme, 'สาขา', '0654 สาขาโลตัส นาดี อุดรธานี'),
+          _buildBankInfoRow(theme, 'เลขที่บัญชี', '020282488558'),
+          _buildBankInfoRow(theme, 'ชื่อผู้ฝาก', 'นางสาว พัทธ์ธีรา สุนะไตร์'),
+          SizedBox(height: 1.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'กรุณาโอนเงินและแนบสลิปการโอนเงินเพื่อยืนยันการชำระเงิน',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBankInfoRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 0.6.h),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 30.w,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            ':  ',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
