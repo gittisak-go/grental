@@ -1,17 +1,27 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
 import 'dart:async';
 
 import '../../core/app_export.dart';
-import '../../models/reservation_model.dart';
-import '../../models/vehicle_model.dart';
+import '../../models/car_model.dart';
+import '../../models/booking_payment_model.dart';
 import '../../routes/app_routes.dart';
-import '../../services/reservation_service.dart';
-import '../../services/vehicle_service.dart';
+import '../../services/booking_service.dart';
 import '../../services/supabase_service.dart';
-import '../../services/magic_link_auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// ─── Color constants matching app_colors.dart ────────────────────────────────
+const _kPrimary = Color(0xFFFF2D78);
+const _kSecondary = Color(0xFF2979FF);
+const _kBackground = Color(0xFF0A0A12);
+const _kSurface = Color(0xFF16161E);
+const _kAccent = Color(0xFFFFE500);
+const _kSuccess = Color(0xFF00FFC2);
+const _kError = Color(0xFFFF453A);
+const _kTextPrimary = Color(0xFFFFFFFF);
+const _kTextSecondary = Color(0xFF8E8E93);
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -20,1131 +30,1291 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final ReservationService _reservationService = ReservationService();
-  final VehicleService _vehicleService = VehicleService();
-  final SupabaseService _supabaseService = SupabaseService.instance;
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  final BookingService _bookingService = BookingService();
 
   bool _isLoading = true;
   String? _errorMessage;
 
-  List<ReservationModel> _allReservations = [];
-  List<VehicleModel> _allVehicles = [];
+  List<BookingModel> _allBookings = [];
+  List<CarModel> _allCars = [];
 
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 7));
-  DateTime _endDate = DateTime.now();
+  // Realtime channels
+  RealtimeChannel? _bookingsChannel;
+  RealtimeChannel? _carsChannel;
+  RealtimeChannel? _paymentsChannel;
 
-  // Real-time subscription streams
-  StreamSubscription? _reservationsSubscription;
-  StreamSubscription? _vehiclesSubscription;
+  late TabController _tabController;
+
+  // Quick action loading states
+  final Map<String, bool> _actionLoading = {};
 
   @override
   void initState() {
     super.initState();
-    _checkAdminAccess();
-    _loadDashboardData();
-    _setupRealtimeSubscriptions();
-  }
-
-  Future<void> _checkAdminAccess() async {
-    final authService = MagicLinkAuthService();
-    if (!authService.isCurrentUserSuperAdmin) {
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/ride-request-screen',
-          (route) => false,
-        );
-      }
-    }
+    _tabController = TabController(length: 3, vsync: this);
+    _loadData();
+    _setupRealtime();
   }
 
   @override
   void dispose() {
-    _reservationsSubscription?.cancel();
-    _vehiclesSubscription?.cancel();
+    _tabController.dispose();
+    _bookingsChannel?.unsubscribe();
+    _carsChannel?.unsubscribe();
+    _paymentsChannel?.unsubscribe();
     super.dispose();
   }
 
-  Future<void> _setupRealtimeSubscriptions() async {
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      // Subscribe to reservations table changes
-      _reservationsSubscription = _supabaseService.client
-          .from('reservations')
-          .stream(primaryKey: ['id']).listen(
-        (List<Map<String, dynamic>> data) {
-          if (mounted) {
-            setState(() {
-              _allReservations =
-                  data.map((json) => ReservationModel.fromJson(json)).toList();
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() {
-              _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
-            });
-          }
-        },
-      );
-
-      // Subscribe to vehicles table changes
-      _vehiclesSubscription = _supabaseService.client
-          .from('vehicles')
-          .stream(primaryKey: ['id']).listen(
-        (List<Map<String, dynamic>> data) {
-          if (mounted) {
-            setState(() {
-              _allVehicles =
-                  data.map((json) => VehicleModel.fromJson(json)).toList();
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() {
-              _errorMessage = 'การเชื่อมต่อแบบเรียลไทม์ล้มเหลว: $error';
-            });
-          }
-        },
-      );
+      final bookings = await _bookingService.getAllBookings();
+      final cars = await _bookingService.getAllCars();
+      if (mounted) {
+        setState(() {
+          _allBookings = bookings;
+          _allCars = cars;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'ไม่สามารถตั้งค่าการเชื่อมต่อแบบเรียลไทม์: $e';
+          _errorMessage = 'โหลดข้อมูลไม่สำเร็จ: $e';
+          _isLoading = false;
         });
       }
     }
   }
 
-  Future<void> _loadDashboardData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  void _setupRealtime() {
+    final client = SupabaseService.instance.client;
 
-    try {
-      final reservations = await _reservationService.getAllReservations();
-      final vehicles = await _vehicleService.getAllVehicles();
+    _bookingsChannel = client
+        .channel('admin-bookings')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bookings',
+          callback: (_) => _loadData(),
+        )
+        .subscribe();
 
-      setState(() {
-        _allReservations = reservations;
-        _allVehicles = vehicles;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: $e';
-        _isLoading = false;
-      });
-    }
+    _carsChannel = client
+        .channel('admin-cars')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'cars',
+          callback: (_) => _loadData(),
+        )
+        .subscribe();
+
+    _paymentsChannel = client
+        .channel('admin-payments')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'payments',
+          callback: (_) => _loadData(),
+        )
+        .subscribe();
   }
 
-  int get _todayBookingsCount {
-    final today = DateTime.now();
-    return _allReservations.where((r) {
-      final createdDate = r.createdAt;
-      return createdDate.year == today.year &&
-          createdDate.month == today.month &&
-          createdDate.day == today.day;
-    }).length;
+  // ─── Computed stats ────────────────────────────────────────────────────────
+
+  int get _pendingBookingsCount =>
+      _allBookings.where((b) => b.status == 'pending').length;
+
+  int get _activeBookingsCount =>
+      _allBookings.where((b) => b.status == 'active').length;
+
+  int get _pendingPaymentsCount {
+    int count = 0;
+    for (final b in _allBookings) {
+      if (b.payments != null) {
+        for (final p in b.payments!) {
+          if (p['status'] == 'pending' && p['slip_url'] != null) count++;
+        }
+      }
+    }
+    return count;
   }
 
   double get _totalRevenue {
-    return _allReservations
-        .where(
-          (r) =>
-              r.status == ReservationStatus.completed ||
-              r.status == ReservationStatus.confirmed ||
-              r.status == ReservationStatus.active,
-        )
-        .fold(0.0, (sum, r) => sum + r.totalAmount);
+    double total = 0;
+    for (final b in _allBookings) {
+      if (b.payments != null) {
+        for (final p in b.payments!) {
+          if (p['status'] == 'paid') {
+            total += (p['amount'] as num?)?.toDouble() ?? 0;
+          }
+        }
+      }
+    }
+    return total;
   }
 
-  double get _vehicleUtilizationRate {
-    if (_allVehicles.isEmpty) return 0.0;
-    final unavailableCount = _allVehicles.where((v) => !v.isAvailable).length;
-    return (unavailableCount / _allVehicles.length) * 100;
+  int get _availableCarsCount =>
+      _allCars.where((c) => c.status == 'available').length;
+
+  // ─── Actions ───────────────────────────────────────────────────────────────
+
+  Future<void> _approveBooking(String bookingId) async {
+    setState(() => _actionLoading[bookingId] = true);
+    try {
+      await SupabaseService.instance.client
+          .from('bookings')
+          .update({'status': 'confirmed'}).eq('id', bookingId);
+      _showSnack('ยืนยันการจองสำเร็จ', _kSuccess);
+      await _loadData();
+    } catch (e) {
+      _showSnack('ยืนยันไม่สำเร็จ: $e', _kError);
+    } finally {
+      if (mounted) setState(() => _actionLoading.remove(bookingId));
+    }
   }
 
-  int get _activeCustomersCount {
-    return _allReservations
-        .where(
-          (r) =>
-              r.status == ReservationStatus.active ||
-              r.status == ReservationStatus.confirmed,
-        )
-        .map((r) => r.customerEmail)
-        .toSet()
-        .length;
+  Future<void> _cancelBooking(String bookingId) async {
+    final confirmed = await _showConfirmDialog(
+      'ยกเลิกการจอง',
+      'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?',
+    );
+    if (!confirmed) return;
+
+    setState(() => _actionLoading[bookingId] = true);
+    try {
+      await _bookingService.cancelBooking(bookingId);
+      _showSnack('ยกเลิกการจองสำเร็จ', _kAccent);
+      await _loadData();
+    } catch (e) {
+      _showSnack('ยกเลิกไม่สำเร็จ: $e', _kError);
+    } finally {
+      if (mounted) setState(() => _actionLoading.remove(bookingId));
+    }
   }
+
+  Future<void> _verifyPayment(String paymentId) async {
+    setState(() => _actionLoading[paymentId] = true);
+    try {
+      await _bookingService.confirmPayment(paymentId);
+      _showSnack('ยืนยันการชำระเงินสำเร็จ', _kSuccess);
+      await _loadData();
+    } catch (e) {
+      _showSnack('ยืนยันการชำระเงินไม่สำเร็จ: $e', _kError);
+    } finally {
+      if (mounted) setState(() => _actionLoading.remove(paymentId));
+    }
+  }
+
+  Future<void> _updateCarStatus(String carId, String newStatus) async {
+    setState(() => _actionLoading[carId] = true);
+    try {
+      await SupabaseService.instance.client
+          .from('cars')
+          .update({'status': newStatus}).eq('id', carId);
+      _showSnack('อัปเดตสถานะรถสำเร็จ', _kSuccess);
+      await _loadData();
+    } catch (e) {
+      _showSnack('อัปเดตสถานะไม่สำเร็จ: $e', _kError);
+    } finally {
+      if (mounted) setState(() => _actionLoading.remove(carId));
+    }
+  }
+
+  void _showSnack(String msg, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg,
+          style: GoogleFonts.dmSans(
+              color: _kBackground, fontWeight: FontWeight.w600)),
+      backgroundColor: color,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+    ));
+  }
+
+  Future<bool> _showConfirmDialog(String title, String content) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: _kSurface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0)),
+            title: Text(title,
+                style: GoogleFonts.dmSans(
+                    color: _kTextPrimary, fontWeight: FontWeight.bold)),
+            content: Text(content,
+                style: GoogleFonts.dmSans(color: _kTextSecondary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('ยกเลิก',
+                    style: GoogleFonts.dmSans(color: _kTextSecondary)),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(backgroundColor: _kError),
+                child: Text('ยืนยัน',
+                    style: GoogleFonts.dmSans(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  // ─── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.pink),
-          onPressed: () => Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/ride-request-screen',
-            (route) => false,
-          ),
-        ),
-        title: Row(
-          children: [
-            Text(
-              'แดชบอร์ดผู้ดูแลระบบ',
-              style: TextStyle(
-                color: Colors.grey[900],
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(width: 2.w),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.3.h),
-              decoration: BoxDecoration(
-                color: Colors.green.withAlpha(26),
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  SizedBox(width: 1.w),
-                  Text(
-                    'สด',
-                    style: TextStyle(
-                      fontSize: 9.sp,
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.date_range, color: Colors.pink),
-            onPressed: _showDateRangePicker,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.pink),
-            onPressed: _loadDashboardData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.pink),
-            tooltip: 'ออกจากระบบ',
-            onPressed: _showLogoutDialog,
-          ),
-        ],
-      ),
+      backgroundColor: _kBackground,
+      appBar: _buildAppBar(),
       body: _isLoading
-          ? _buildLoadingState()
+          ? _buildLoading()
           : _errorMessage != null
-              ? _buildErrorState()
-              : _buildDashboardContent(),
+              ? _buildError()
+              : _buildBody(),
     );
   }
 
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: _kSurface,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: _kPrimary),
+        onPressed: () => Navigator.pushNamedAndRemoveUntil(
+            context, AppRoutes.rideRequest, (r) => false),
+      ),
+      title: Row(
         children: [
-          const CircularProgressIndicator(color: Colors.pink),
-          SizedBox(height: 2.h),
-          Text(
-            'กำลังโหลดข้อมูล...',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
-          ),
+          Text('Admin Dashboard',
+              style: GoogleFonts.dmSans(
+                  color: _kTextPrimary,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold)),
+          SizedBox(width: 2.w),
+          _liveChip(),
         ],
       ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-          SizedBox(height: 2.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 5.w),
-            child: Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey[700]),
-            ),
-          ),
-          SizedBox(height: 3.h),
-          ElevatedButton.icon(
-            onPressed: _loadDashboardData,
-            icon: const Icon(Icons.refresh),
-            label: const Text('ลองอีกครั้ง'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.pink,
-              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.5.h),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDashboardContent() {
-    return RefreshIndicator(
-      onRefresh: _loadDashboardData,
-      color: Colors.pink,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(3.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildMetricsCards(),
-            SizedBox(height: 2.h),
-            _buildRevenueChart(),
-            SizedBox(height: 2.h),
-            _buildVehicleUtilizationGrid(),
-            SizedBox(height: 2.h),
-            _buildCustomerMetrics(),
-            SizedBox(height: 2.h),
-            _buildRealtimeBookingFeed(),
-            SizedBox(height: 2.h),
-            _buildQuickActions(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricsCards() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 3.w,
-      mainAxisSpacing: 2.h,
-      childAspectRatio: 1.5,
-      children: [
-        _buildMetricCard(
-          'จองวันนี้',
-          _todayBookingsCount.toString(),
-          Icons.calendar_today,
-          Colors.blue,
-          '+12%',
-        ),
-        _buildMetricCard(
-          'รายได้รวม',
-          '฿${NumberFormat('#,##0').format(_totalRevenue)}',
-          Icons.attach_money,
-          Colors.green,
-          '+8%',
-        ),
-        _buildMetricCard(
-          'อัตราการใช้งานรถ',
-          '${_vehicleUtilizationRate.toStringAsFixed(1)}%',
-          Icons.directions_car,
-          Colors.orange,
-          '+5%',
-        ),
-        _buildMetricCard(
-          'ลูกค้าที่ใช้งาน',
-          _activeCustomersCount.toString(),
-          Icons.people,
-          Colors.purple,
-          '+15%',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh_rounded, color: _kPrimary),
+          onPressed: _loadData,
         ),
       ],
-    );
-  }
-
-  Widget _buildMetricCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-    String trend,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+      bottom: TabBar(
+        controller: _tabController,
+        indicatorColor: _kPrimary,
+        labelColor: _kPrimary,
+        unselectedLabelColor: _kTextSecondary,
+        labelStyle:
+            GoogleFonts.dmSans(fontSize: 11.sp, fontWeight: FontWeight.w600),
+        tabs: [
+          Tab(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.list_alt_rounded, size: 16),
+              SizedBox(width: 1.w),
+              const Text('การจอง'),
+              if (_pendingBookingsCount > 0) ...[
+                SizedBox(width: 1.w),
+                _badge(_pendingBookingsCount, _kAccent),
+              ],
+            ]),
           ),
-        ],
-      ),
-      padding: EdgeInsets.all(3.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(2.w),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(26),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(26),
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Text(
-                  trend,
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          Tab(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.payment_rounded, size: 16),
+              SizedBox(width: 1.w),
+              const Text('ชำระเงิน'),
+              if (_pendingPaymentsCount > 0) ...[
+                SizedBox(width: 1.w),
+                _badge(_pendingPaymentsCount, _kError),
+              ],
+            ]),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[900],
-                ),
-              ),
-              Text(
-                title,
-                style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
-              ),
-            ],
+          Tab(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.directions_car_rounded, size: 16),
+              SizedBox(width: 1.w),
+              const Text('รถยนต์'),
+            ]),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRevenueChart() {
+  Widget _liveChip() {
     return Container(
+      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.4.h),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: _kSuccess.withAlpha(30),
+        borderRadius: BorderRadius.circular(20.0),
+        border: Border.all(color: _kSuccess.withAlpha(80)),
       ),
-      padding: EdgeInsets.all(4.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'กราฟรายได้',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[900],
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                onSelected: (value) {},
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'week', child: Text('รายสัปดาห์')),
-                  const PopupMenuItem(value: 'month', child: Text('รายเดือน')),
-                  const PopupMenuItem(value: 'year', child: Text('รายปี')),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 2.h),
-          SizedBox(
-            height: 25.h,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 1000,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(color: Colors.grey[200]!, strokeWidth: 1);
-                  },
-                ),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        const days = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
-                        return Text(
-                          days[value.toInt() % 7],
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: Colors.grey[600],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          '${(value / 1000).toInt()}K',
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: Colors.grey[600],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: _generateRevenueSpots(),
-                    isCurved: true,
-                    color: Colors.pink,
-                    barWidth: 3,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) {
-                        return FlDotCirclePainter(
-                          radius: 4,
-                          color: Colors.white,
-                          strokeWidth: 2,
-                          strokeColor: Colors.pink,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: Colors.pink.withAlpha(26),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<FlSpot> _generateRevenueSpots() {
-    // Generate revenue data based on actual reservations
-    final spots = <FlSpot>[];
-    for (int i = 0; i < 7; i++) {
-      final date = DateTime.now().subtract(Duration(days: 6 - i));
-      final dayRevenue = _allReservations.where((r) {
-        final rDate = r.createdAt;
-        return rDate.year == date.year &&
-            rDate.month == date.month &&
-            rDate.day == date.day &&
-            (r.status == ReservationStatus.completed ||
-                r.status == ReservationStatus.confirmed ||
-                r.status == ReservationStatus.active);
-      }).fold(0.0, (sum, r) => sum + r.totalAmount);
-      spots.add(FlSpot(i.toDouble(), dayRevenue));
-    }
-    return spots;
-  }
-
-  Widget _buildVehicleUtilizationGrid() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(4.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'สถานะรถยนต์',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[900],
-            ),
-          ),
-          SizedBox(height: 2.h),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 2.w,
-              mainAxisSpacing: 1.h,
-              childAspectRatio: 1.2,
-            ),
-            itemCount: _allVehicles.length,
-            itemBuilder: (context, index) {
-              final vehicle = _allVehicles[index];
-              return _buildVehicleStatusCard(vehicle);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVehicleStatusCard(VehicleModel vehicle) {
-    final isAvailable = vehicle.isAvailable;
-    return Container(
-      decoration: BoxDecoration(
-        color:
-            isAvailable ? Colors.green.withAlpha(26) : Colors.red.withAlpha(26),
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(
-          color: isAvailable ? Colors.green : Colors.red,
-          width: 1,
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration:
+              const BoxDecoration(color: _kSuccess, shape: BoxShape.circle),
         ),
-      ),
-      padding: EdgeInsets.all(2.w),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.directions_car,
-            color: isAvailable ? Colors.green : Colors.red,
-            size: 24,
-          ),
-          SizedBox(height: 0.5.h),
-          Text(
-            '${vehicle.brand} ${vehicle.model}',
-            style: TextStyle(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[900],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            isAvailable ? 'ว่าง' : 'ไม่ว่าง',
-            style: TextStyle(
+        SizedBox(width: 1.w),
+        Text('LIVE',
+            style: GoogleFonts.dmSans(
+                color: _kSuccess, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  Widget _badge(int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+          color: color, borderRadius: BorderRadius.circular(10.0)),
+      child: Text('$count',
+          style: GoogleFonts.dmSans(
+              color: _kBackground,
               fontSize: 9.sp,
-              color: isAvailable ? Colors.green : Colors.red,
-            ),
-          ),
-        ],
-      ),
+              fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildCustomerMetrics() {
-    final uniqueCustomers =
-        _allReservations.map((r) => r.customerEmail).toSet().length;
-    final completedReservations = _allReservations
-        .where((r) => r.status == ReservationStatus.completed)
-        .length;
-    final retentionRate = _allReservations.isEmpty
-        ? 0.0
-        : (completedReservations / _allReservations.length) * 100;
+  Widget _buildLoading() {
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const CircularProgressIndicator(color: _kPrimary),
+        SizedBox(height: 2.h),
+        Text('กำลังโหลดข้อมูล...',
+            style: GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 13.sp)),
+      ]),
+    );
+  }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(4.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'สถิติลูกค้า',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[900],
-            ),
-          ),
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 6.w),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.error_outline_rounded, color: _kError, size: 56),
           SizedBox(height: 2.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildCustomerMetricItem(
-                  'ลูกค้าทั้งหมด',
-                  uniqueCustomers.toString(),
-                  Icons.people,
-                  Colors.blue,
-                ),
-              ),
-              Expanded(
-                child: _buildCustomerMetricItem(
-                  'อัตราความสำเร็จ',
-                  '${retentionRate.toStringAsFixed(1)}%',
-                  Icons.trending_up,
-                  Colors.green,
-                ),
-              ),
-            ],
+          Text(_errorMessage!,
+              textAlign: TextAlign.center,
+              style:
+                  GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 13.sp)),
+          SizedBox(height: 3.h),
+          ElevatedButton.icon(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('ลองอีกครั้ง'),
+            style: ElevatedButton.styleFrom(backgroundColor: _kPrimary),
           ),
-        ],
+        ]),
       ),
     );
   }
 
-  Widget _buildCustomerMetricItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(3.w),
-      margin: EdgeInsets.symmetric(horizontal: 1.w),
-      decoration: BoxDecoration(
-        color: color.withAlpha(26),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          SizedBox(height: 1.h),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 10.sp, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRealtimeBookingFeed() {
-    final recentReservations = _allReservations.take(5).toList();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(4.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'การจองล่าสุด',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[900],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(26),
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: 1.w),
-                    Text(
-                      'เรียลไทม์',
-                      style: TextStyle(
-                        fontSize: 10.sp,
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 2.h),
-          recentReservations.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 3.h),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 48,
-                          color: Colors.grey[300],
-                        ),
-                        SizedBox(height: 1.h),
-                        Text(
-                          'ยังไม่มีการจอง',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentReservations.length,
-                  separatorBuilder: (context, index) => Divider(height: 2.h),
-                  itemBuilder: (context, index) {
-                    final reservation = recentReservations[index];
-                    final vehicle = _allVehicles.firstWhere(
-                      (v) => v.id == reservation.vehicleId,
-                      orElse: () => VehicleModel(
-                        id: '',
-                        brand: 'ไม่ทราบ',
-                        model: '',
-                        year: 0,
-                        seats: 0,
-                        transmission: '',
-                        fuelType: '',
-                        pricePerDay: 0,
-                        imageUrl: '',
-                        isAvailable: true,
-                        createdAt: DateTime.now(),
-                        updatedAt: DateTime.now(),
-                      ),
-                    );
-
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(
-                          reservation.status.toString().split('.').last,
-                        ).withAlpha(51),
-                        child: Icon(
-                          Icons.directions_car,
-                          color: _getStatusColor(
-                            reservation.status.toString().split('.').last,
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        reservation.customerName,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${vehicle.brand} ${vehicle.model} • ${DateFormat('dd MMM yyyy', 'th').format(reservation.startDate)}',
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '฿${NumberFormat('#,##0').format(reservation.totalAmount)}',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 2.w,
-                              vertical: 0.3.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(
-                                reservation.status.toString().split('.').last,
-                              ).withAlpha(26),
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: Text(
-                              _getStatusText(
-                                reservation.status.toString().split('.').last,
-                              ),
-                              style: TextStyle(
-                                fontSize: 9.sp,
-                                color: _getStatusColor(
-                                  reservation.status.toString().split('.').last,
-                                ),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(4.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'การดำเนินการด่วน',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[900],
-            ),
-          ),
-          SizedBox(height: 2.h),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 3.w,
-            mainAxisSpacing: 2.h,
-            childAspectRatio: 2,
-            children: [
-              _buildQuickActionButton(
-                'เพิ่มรถใหม่',
-                Icons.add_circle,
-                Colors.blue,
-                () => Navigator.pushNamed(context, AppRoutes.vehicleManagement),
-              ),
-              _buildQuickActionButton(
-                'จัดการการจอง',
-                Icons.event_note,
-                Colors.orange,
-                () => Navigator.pushNamed(context, AppRoutes.adminReservations),
-              ),
-              _buildQuickActionButton(
-                'สร้างรายงาน',
-                Icons.assessment,
-                Colors.purple,
-                () {},
-              ),
-              _buildQuickActionButton(
-                'ตั้งค่า',
-                Icons.settings,
-                Colors.grey,
-                () {},
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: color.withAlpha(26),
-          borderRadius: BorderRadius.circular(8.0),
-          border: Border.all(color: color.withAlpha(77)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildBody() {
+    return Column(children: [
+      _buildStatsRow(),
+      Expanded(
+        child: TabBarView(
+          controller: _tabController,
           children: [
-            Icon(icon, color: color, size: 24),
-            SizedBox(width: 2.w),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            _buildBookingsTab(),
+            _buildPaymentsTab(),
+            _buildVehiclesTab(),
           ],
         ),
       ),
+    ]);
+  }
+
+  // ─── Stats Row ─────────────────────────────────────────────────────────────
+
+  Widget _buildStatsRow() {
+    return Container(
+      color: _kSurface,
+      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+      child: Row(children: [
+        _statChip(Icons.pending_actions_rounded, '$_pendingBookingsCount',
+            'รอยืนยัน', _kAccent),
+        SizedBox(width: 2.w),
+        _statChip(Icons.directions_car_rounded, '$_activeBookingsCount',
+            'กำลังใช้', _kSecondary),
+        SizedBox(width: 2.w),
+        _statChip(Icons.check_circle_rounded, '$_availableCarsCount', 'รถว่าง',
+            _kSuccess),
+        SizedBox(width: 2.w),
+        _statChip(
+            Icons.attach_money_rounded,
+            '฿${NumberFormat('#,##0').format(_totalRevenue)}',
+            'รายได้',
+            _kPrimary),
+      ]),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'confirmed':
-        return Colors.blue;
-      case 'active':
-        return Colors.green;
-      case 'completed':
-        return Colors.grey;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'confirmed':
-        return 'ยืนยันแล้ว';
-      case 'active':
-        return 'กำลังใช้งาน';
-      case 'completed':
-        return 'เสร็จสิ้น';
-      case 'cancelled':
-        return 'ยกเลิก';
-      default:
-        return 'รอดำเนินการ';
-    }
-  }
-
-  Future<void> _showDateRangePicker() async {
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Colors.pink),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-      });
-      await _loadDashboardData();
-    }
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ออกจากระบบ'),
-        content: const Text('คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await MagicLinkAuthService().signOut();
-              if (mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/ride-request-screen',
-                  (route) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-            child:
-                const Text('ออกจากระบบ', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+  Widget _statChip(IconData icon, String value, String label, Color color) {
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 1.h, horizontal: 1.5.w),
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(10.0),
+          border: Border.all(color: color.withAlpha(60)),
+        ),
+        child: Column(children: [
+          Icon(icon, color: color, size: 18),
+          SizedBox(height: 0.3.h),
+          Text(value,
+              style: GoogleFonts.dmSans(
+                  color: color, fontSize: 11.sp, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis),
+          Text(label,
+              style: GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 8.sp),
+              overflow: TextOverflow.ellipsis),
+        ]),
       ),
     );
+  }
+
+  // ─── Bookings Tab ──────────────────────────────────────────────────────────
+
+  Widget _buildBookingsTab() {
+    if (_allBookings.isEmpty) {
+      return _buildEmptyState(Icons.event_busy_rounded, 'ยังไม่มีการจอง');
+    }
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: _kPrimary,
+      backgroundColor: _kSurface,
+      child: ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 2.h),
+        itemCount: _allBookings.length,
+        itemBuilder: (ctx, i) => _buildBookingCard(_allBookings[i]),
+      ),
+    );
+  }
+
+  Widget _buildBookingCard(BookingModel booking) {
+    final statusColor = _bookingStatusColor(booking.status);
+    final isLoading = _actionLoading[booking.id ?? ''] == true;
+    final carInfo = booking.car;
+    final carName = carInfo != null
+        ? '${carInfo['brand'] ?? ''} ${carInfo['model'] ?? ''}'
+        : 'ไม่ทราบรถ';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 2.h),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(14.0),
+        border: Border.all(color: statusColor.withAlpha(60)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Header
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+          decoration: BoxDecoration(
+            color: statusColor.withAlpha(20),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14.0),
+              topRight: Radius.circular(14.0),
+            ),
+          ),
+          child: Row(children: [
+            Icon(Icons.directions_car_rounded, color: statusColor, size: 18),
+            SizedBox(width: 2.w),
+            Expanded(
+              child: Text(carName,
+                  style: GoogleFonts.dmSans(
+                      color: _kTextPrimary,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            _statusBadge(booking.statusDisplay, statusColor),
+          ]),
+        ),
+        // Body
+        Padding(
+          padding: EdgeInsets.all(4.w),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.calendar_today_rounded,
+                  color: _kTextSecondary, size: 14),
+              SizedBox(width: 1.w),
+              Text(
+                '${DateFormat('dd MMM yy').format(booking.startDate)} → ${DateFormat('dd MMM yy').format(booking.endDate)}',
+                style:
+                    GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 11.sp),
+              ),
+              const Spacer(),
+              Text(
+                '฿${NumberFormat('#,##0').format(booking.totalAmount)}',
+                style: GoogleFonts.dmSans(
+                    color: _kSuccess,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.bold),
+              ),
+            ]),
+            SizedBox(height: 0.8.h),
+            Row(children: [
+              const Icon(Icons.tag_rounded, color: _kTextSecondary, size: 14),
+              SizedBox(width: 1.w),
+              Text(
+                (booking.id ?? '').length > 8
+                    ? '#${(booking.id ?? '').substring(0, 8).toUpperCase()}'
+                    : '#${booking.id ?? ''}',
+                style:
+                    GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 10.sp),
+              ),
+              SizedBox(width: 3.w),
+              const Icon(Icons.access_time_rounded,
+                  color: _kTextSecondary, size: 14),
+              SizedBox(width: 1.w),
+              Text(
+                booking.createdAt != null
+                    ? DateFormat('dd/MM/yy HH:mm').format(booking.createdAt!)
+                    : '-',
+                style:
+                    GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 10.sp),
+              ),
+            ]),
+            // Quick action buttons
+            if (booking.status == 'pending' ||
+                booking.status == 'confirmed') ...[
+              SizedBox(height: 1.5.h),
+              Row(children: [
+                if (booking.status == 'pending')
+                  Expanded(
+                    child: _actionBtn(
+                      label: 'อนุมัติ',
+                      icon: Icons.check_circle_outline_rounded,
+                      color: _kSuccess,
+                      isLoading: isLoading,
+                      onTap: () => _approveBooking(booking.id!),
+                    ),
+                  ),
+                if (booking.status == 'pending') SizedBox(width: 2.w),
+                Expanded(
+                  child: _actionBtn(
+                    label: 'ยกเลิก',
+                    icon: Icons.cancel_outlined,
+                    color: _kError,
+                    isLoading: isLoading,
+                    onTap: () => _cancelBooking(booking.id!),
+                  ),
+                ),
+              ]),
+            ],
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  // ─── Payments Tab ──────────────────────────────────────────────────────────
+
+  Widget _buildPaymentsTab() {
+    // Flatten all payments from bookings
+    final payments = <Map<String, dynamic>>[];
+    for (final b in _allBookings) {
+      if (b.payments != null) {
+        for (final p in b.payments!) {
+          payments.add({...p, '_booking': b});
+        }
+      }
+    }
+
+    if (payments.isEmpty) {
+      return _buildEmptyState(
+          Icons.receipt_long_rounded, 'ยังไม่มีข้อมูลการชำระเงิน');
+    }
+
+    // Sort: pending with slip first
+    payments.sort((a, b) {
+      final aHasSlip = a['slip_url'] != null && a['status'] == 'pending';
+      final bHasSlip = b['slip_url'] != null && b['status'] == 'pending';
+      if (aHasSlip && !bHasSlip) return -1;
+      if (!aHasSlip && bHasSlip) return 1;
+      return 0;
+    });
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: _kPrimary,
+      backgroundColor: _kSurface,
+      child: ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 2.h),
+        itemCount: payments.length,
+        itemBuilder: (ctx, i) => _buildPaymentCard(payments[i]),
+      ),
+    );
+  }
+
+  Widget _buildPaymentCard(Map<String, dynamic> payment) {
+    final status = payment['status'] as String? ?? 'pending';
+    final statusColor = _paymentStatusColor(status);
+    final hasSlip = payment['slip_url'] != null;
+    final paymentId = payment['id'] as String? ?? '';
+    final isLoading = _actionLoading[paymentId] == true;
+    final booking = payment['_booking'] as BookingModel?;
+    final method = payment['method'] as String? ?? 'cash';
+    final amount = (payment['amount'] as num?)?.toDouble() ?? 0;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 2.h),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(14.0),
+        border: Border.all(
+          color: (hasSlip && status == 'pending')
+              ? _kAccent.withAlpha(120)
+              : statusColor.withAlpha(60),
+        ),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Header
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+          decoration: BoxDecoration(
+            color: statusColor.withAlpha(20),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14.0),
+              topRight: Radius.circular(14.0),
+            ),
+          ),
+          child: Row(children: [
+            Icon(_paymentMethodIcon(method), color: statusColor, size: 18),
+            SizedBox(width: 2.w),
+            Expanded(
+              child: Text(_paymentMethodDisplay(method),
+                  style: GoogleFonts.dmSans(
+                      color: _kTextPrimary,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold)),
+            ),
+            if (hasSlip && status == 'pending')
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.3.h),
+                decoration: BoxDecoration(
+                  color: _kAccent.withAlpha(30),
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(color: _kAccent.withAlpha(100)),
+                ),
+                child: Text('มีสลิป',
+                    style: GoogleFonts.dmSans(
+                        color: _kAccent,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.bold)),
+              ),
+            SizedBox(width: 2.w),
+            _statusBadge(_paymentStatusDisplay(status), statusColor),
+          ]),
+        ),
+        // Body
+        Padding(
+          padding: EdgeInsets.all(4.w),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text('฿${NumberFormat('#,##0').format(amount)}',
+                  style: GoogleFonts.dmSans(
+                      color: _kTextPrimary,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (booking != null)
+                Text(
+                  'จอง: ${booking.id != null && booking.id!.length > 8 ? '#${booking.id!.substring(0, 8).toUpperCase()}' : '#${booking.id ?? ''}'}',
+                  style: GoogleFonts.dmSans(
+                      color: _kTextSecondary, fontSize: 10.sp),
+                ),
+            ]),
+            if (payment['paid_at'] != null) ...[
+              SizedBox(height: 0.5.h),
+              Row(children: [
+                const Icon(Icons.check_circle_rounded,
+                    color: _kSuccess, size: 14),
+                SizedBox(width: 1.w),
+                Text(
+                  'ชำระเมื่อ: ${DateFormat('dd/MM/yy HH:mm').format(DateTime.parse(payment['paid_at'] as String))}',
+                  style: GoogleFonts.dmSans(color: _kSuccess, fontSize: 10.sp),
+                ),
+              ]),
+            ],
+            // Slip preview + verify button
+            if (hasSlip) ...[
+              SizedBox(height: 1.5.h),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _showSlipDialog(payment['slip_url'] as String),
+                    icon: const Icon(Icons.image_rounded, size: 16),
+                    label: const Text('ดูสลิป'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _kSecondary,
+                      side: BorderSide(color: _kSecondary.withAlpha(100)),
+                      padding: EdgeInsets.symmetric(vertical: 1.h),
+                    ),
+                  ),
+                ),
+                if (status == 'pending') ...[
+                  SizedBox(width: 2.w),
+                  Expanded(
+                    child: _actionBtn(
+                      label: 'ยืนยันสลิป',
+                      icon: Icons.verified_rounded,
+                      color: _kSuccess,
+                      isLoading: isLoading,
+                      onTap: () => _verifyPayment(paymentId),
+                    ),
+                  ),
+                ],
+              ]),
+            ],
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  void _showSlipDialog(String slipUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: _kSurface,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+            padding: EdgeInsets.all(4.w),
+            child: Row(children: [
+              Text('สลิปการชำระเงิน',
+                  style: GoogleFonts.dmSans(
+                      color: _kTextPrimary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close, color: _kTextSecondary),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ]),
+          ),
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(16.0),
+              bottomRight: Radius.circular(16.0),
+            ),
+            child: Image.network(
+              slipUrl,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Padding(
+                padding: EdgeInsets.all(4.w),
+                child: Column(children: [
+                  const Icon(Icons.broken_image_rounded,
+                      color: _kTextSecondary, size: 48),
+                  SizedBox(height: 1.h),
+                  Text('ไม่สามารถโหลดรูปได้',
+                      style: GoogleFonts.dmSans(color: _kTextSecondary)),
+                ]),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  // ─── Vehicles Tab ──────────────────────────────────────────────────────────
+
+  Widget _buildVehiclesTab() {
+    if (_allCars.isEmpty) {
+      return _buildEmptyState(Icons.no_transfer_rounded, 'ยังไม่มีข้อมูลรถ');
+    }
+
+    // Group by status
+    final available = _allCars.where((c) => c.status == 'available').toList();
+    final rented = _allCars.where((c) => c.status == 'rented').toList();
+    final maintenance =
+        _allCars.where((c) => c.status == 'maintenance').toList();
+    final inactive = _allCars.where((c) => c.status == 'inactive').toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: _kPrimary,
+      backgroundColor: _kSurface,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 2.h),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Summary row
+          _buildCarSummaryRow(available.length, rented.length,
+              maintenance.length, inactive.length),
+          SizedBox(height: 2.h),
+          if (available.isNotEmpty) ...[
+            _sectionHeader('ว่าง', available.length, _kSuccess),
+            SizedBox(height: 1.h),
+            _buildCarGrid(available),
+            SizedBox(height: 2.h),
+          ],
+          if (rented.isNotEmpty) ...[
+            _sectionHeader('กำลังเช่า', rented.length, _kSecondary),
+            SizedBox(height: 1.h),
+            _buildCarGrid(rented),
+            SizedBox(height: 2.h),
+          ],
+          if (maintenance.isNotEmpty) ...[
+            _sectionHeader('ซ่อมบำรุง', maintenance.length, _kAccent),
+            SizedBox(height: 1.h),
+            _buildCarGrid(maintenance),
+            SizedBox(height: 2.h),
+          ],
+          if (inactive.isNotEmpty) ...[
+            _sectionHeader('ไม่ใช้งาน', inactive.length, _kTextSecondary),
+            SizedBox(height: 1.h),
+            _buildCarGrid(inactive),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildCarSummaryRow(int avail, int rented, int maint, int inactive) {
+    return Row(children: [
+      _carSummaryChip('ว่าง', avail, _kSuccess),
+      SizedBox(width: 2.w),
+      _carSummaryChip('เช่า', rented, _kSecondary),
+      SizedBox(width: 2.w),
+      _carSummaryChip('ซ่อม', maint, _kAccent),
+      SizedBox(width: 2.w),
+      _carSummaryChip('ปิด', inactive, _kTextSecondary),
+    ]);
+  }
+
+  Widget _carSummaryChip(String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 1.h),
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(10.0),
+          border: Border.all(color: color.withAlpha(60)),
+        ),
+        child: Column(children: [
+          Text('$count',
+              style: GoogleFonts.dmSans(
+                  color: color, fontSize: 14.sp, fontWeight: FontWeight.bold)),
+          Text(label,
+              style:
+                  GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 9.sp)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, int count, Color color) {
+    return Row(children: [
+      Container(
+          width: 3,
+          height: 18,
+          color: color,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(2.0))),
+      SizedBox(width: 2.w),
+      Text(title,
+          style: GoogleFonts.dmSans(
+              color: _kTextPrimary,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.bold)),
+      SizedBox(width: 2.w),
+      _badge(count, color),
+    ]);
+  }
+
+  Widget _buildCarGrid(List<CarModel> cars) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 3.w,
+        mainAxisSpacing: 1.5.h,
+        childAspectRatio: 1.4,
+      ),
+      itemCount: cars.length,
+      itemBuilder: (ctx, i) => _buildCarCard(cars[i]),
+    );
+  }
+
+  Widget _buildCarCard(CarModel car) {
+    final statusColor = _carStatusColor(car.status);
+    final isLoading = _actionLoading[car.id] == true;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: statusColor.withAlpha(60)),
+      ),
+      child: Column(children: [
+        // Car image or placeholder
+        Expanded(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12.0),
+              topRight: Radius.circular(12.0),
+            ),
+            child: car.imageUrls.isNotEmpty
+                ? Image.network(car.imageUrls.first,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (_, __, ___) => _carPlaceholder(statusColor))
+                : _carPlaceholder(statusColor),
+          ),
+        ),
+        // Info + action
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.8.h),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${car.brand} ${car.model}',
+                style: GoogleFonts.dmSans(
+                    color: _kTextPrimary,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+            Row(children: [
+              Expanded(
+                child: Text(car.plate,
+                    style: GoogleFonts.dmSans(
+                        color: _kTextSecondary, fontSize: 9.sp),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              _statusDot(statusColor),
+            ]),
+            SizedBox(height: 0.5.h),
+            // Status change button
+            isLoading
+                ? const Center(
+                    child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _kPrimary)))
+                : _carStatusButton(car),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _carPlaceholder(Color color) {
+    return Container(
+      color: color.withAlpha(20),
+      child: Center(
+          child: Icon(Icons.directions_car_rounded, color: color, size: 32)),
+    );
+  }
+
+  Widget _statusDot(Color color) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+
+  Widget _carStatusButton(CarModel car) {
+    final nextStatus = _nextCarStatus(car.status);
+    if (nextStatus == null) return const SizedBox.shrink();
+    return GestureDetector(
+      onTap: () => _showCarStatusMenu(car),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: 0.4.h),
+        decoration: BoxDecoration(
+          color: _kPrimary.withAlpha(20),
+          borderRadius: BorderRadius.circular(6.0),
+          border: Border.all(color: _kPrimary.withAlpha(60)),
+        ),
+        child: Text('เปลี่ยนสถานะ',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.dmSans(
+                color: _kPrimary, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  void _showCarStatusMenu(CarModel car) {
+    final statuses = ['available', 'rented', 'maintenance', 'inactive'];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _kSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: _kTextSecondary.withAlpha(60),
+              borderRadius: BorderRadius.circular(2.0),
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text('${car.brand} ${car.model} (${car.plate})',
+              style: GoogleFonts.dmSans(
+                  color: _kTextPrimary,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold)),
+          SizedBox(height: 0.5.h),
+          Text('เลือกสถานะใหม่',
+              style:
+                  GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 12.sp)),
+          SizedBox(height: 2.h),
+          ...statuses.map((s) {
+            final color = _carStatusColor(s);
+            final isCurrent = s == car.status;
+            return ListTile(
+              onTap: isCurrent
+                  ? null
+                  : () {
+                      Navigator.pop(ctx);
+                      _updateCarStatus(car.id, s);
+                    },
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(_carStatusIcon(s), color: color, size: 18),
+              ),
+              title: Text(_carStatusDisplay(s),
+                  style: GoogleFonts.dmSans(
+                      color: isCurrent ? _kTextSecondary : _kTextPrimary,
+                      fontWeight:
+                          isCurrent ? FontWeight.normal : FontWeight.w600)),
+              trailing: isCurrent
+                  ? const Icon(Icons.check_rounded, color: _kSuccess)
+                  : null,
+            );
+          }),
+          SizedBox(height: 1.h),
+        ]),
+      ),
+    );
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  Widget _buildEmptyState(IconData icon, String message) {
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, color: _kTextSecondary.withAlpha(100), size: 56),
+        SizedBox(height: 2.h),
+        Text(message,
+            style: GoogleFonts.dmSans(color: _kTextSecondary, fontSize: 13.sp)),
+      ]),
+    );
+  }
+
+  Widget _statusBadge(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.3.h),
+      decoration: BoxDecoration(
+        color: color.withAlpha(30),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: color.withAlpha(80)),
+      ),
+      child: Text(label,
+          style: GoogleFonts.dmSans(
+              color: color, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _actionBtn({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool isLoading,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: isLoading ? null : onTap,
+      icon: isLoading
+          ? SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: color))
+          : Icon(icon, size: 14),
+      label: Text(label,
+          style:
+              GoogleFonts.dmSans(fontSize: 10.sp, fontWeight: FontWeight.bold)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color.withAlpha(30),
+        foregroundColor: color,
+        side: BorderSide(color: color.withAlpha(100)),
+        padding: EdgeInsets.symmetric(vertical: 1.h),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      ),
+    );
+  }
+
+  Color _bookingStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return _kAccent;
+      case 'confirmed':
+        return _kSecondary;
+      case 'active':
+        return _kSuccess;
+      case 'completed':
+        return _kTextSecondary;
+      case 'cancelled':
+        return _kError;
+      default:
+        return _kTextSecondary;
+    }
+  }
+
+  Color _paymentStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return _kAccent;
+      case 'paid':
+        return _kSuccess;
+      case 'failed':
+        return _kError;
+      case 'refunded':
+        return _kSecondary;
+      default:
+        return _kTextSecondary;
+    }
+  }
+
+  String _paymentStatusDisplay(String status) {
+    switch (status) {
+      case 'pending':
+        return 'รอชำระ';
+      case 'paid':
+        return 'ชำระแล้ว';
+      case 'failed':
+        return 'ล้มเหลว';
+      case 'refunded':
+        return 'คืนเงิน';
+      default:
+        return status;
+    }
+  }
+
+  String _paymentMethodDisplay(String method) {
+    switch (method) {
+      case 'promptpay':
+        return 'PromptPay';
+      case 'bank_transfer':
+        return 'โอนเงิน';
+      case 'cash':
+        return 'เงินสด';
+      case 'card':
+        return 'บัตรเครดิต';
+      default:
+        return method;
+    }
+  }
+
+  IconData _paymentMethodIcon(String method) {
+    switch (method) {
+      case 'promptpay':
+        return Icons.qr_code_rounded;
+      case 'bank_transfer':
+        return Icons.account_balance_rounded;
+      case 'cash':
+        return Icons.payments_rounded;
+      case 'card':
+        return Icons.credit_card_rounded;
+      default:
+        return Icons.payment_rounded;
+    }
+  }
+
+  Color _carStatusColor(String status) {
+    switch (status) {
+      case 'available':
+        return _kSuccess;
+      case 'rented':
+        return _kSecondary;
+      case 'maintenance':
+        return _kAccent;
+      case 'inactive':
+        return _kTextSecondary;
+      default:
+        return _kTextSecondary;
+    }
+  }
+
+  String _carStatusDisplay(String status) {
+    switch (status) {
+      case 'available':
+        return 'ว่าง';
+      case 'rented':
+        return 'กำลังเช่า';
+      case 'maintenance':
+        return 'ซ่อมบำรุง';
+      case 'inactive':
+        return 'ไม่ใช้งาน';
+      default:
+        return status;
+    }
+  }
+
+  IconData _carStatusIcon(String status) {
+    switch (status) {
+      case 'available':
+        return Icons.check_circle_rounded;
+      case 'rented':
+        return Icons.directions_car_rounded;
+      case 'maintenance':
+        return Icons.build_rounded;
+      case 'inactive':
+        return Icons.block_rounded;
+      default:
+        return Icons.help_rounded;
+    }
+  }
+
+  String? _nextCarStatus(String current) {
+    switch (current) {
+      case 'available':
+        return 'maintenance';
+      case 'rented':
+        return 'available';
+      case 'maintenance':
+        return 'available';
+      case 'inactive':
+        return 'available';
+      default:
+        return null;
+    }
   }
 }

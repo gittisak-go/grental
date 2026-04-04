@@ -8,6 +8,7 @@ import '../presentation/fleet_inventory_screen/fleet_inventory_screen.dart';
 import '../presentation/live_tracking_screen/live_tracking_screen.dart';
 import '../presentation/location_detection_screen/location_detection_screen.dart';
 import '../presentation/payment_screen/payment_screen.dart';
+import '../presentation/required_documents_screen/required_documents_screen.dart';
 import '../presentation/ride_history_screen/ride_history_screen.dart';
 import '../presentation/ride_request_screen/ride_request_screen.dart';
 import '../presentation/splash_screen/splash_screen.dart';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const String aboutAppScreen = '/about-app-screen';
   static const String notificationPreferencesScreen =
       '/notification-preferences-screen';
+  static const String requiredDocumentsScreen = '/required-documents-screen';
 
   // New booking flow routes
   static const String carSelectionScreen = '/car-selection-screen';
@@ -82,24 +84,28 @@ class AppRoutes {
   }
 
   static Map<String, WidgetBuilder> get routes => {
-        initial: (context) => const RideRequestScreen(),
-        rideRequest: (context) => const RideRequestScreen(),
-        liveTracking: (context) => const LiveTrackingScreen(),
-        splash: (context) => const SplashScreen(),
-        payment: (context) => const PaymentScreen(),
-        driverProfile: (context) => const DriverProfileScreen(),
-        authentication: (context) => const AuthenticationScreen(),
-        rideHistory: (context) => const RideHistoryScreen(),
-        locationDetection: (context) => const LocationDetectionScreen(),
-        bankInfoScreen: (context) => const BankInfoScreen(),
-        viewerDashboardScreen: (context) => const ViewerDashboardScreen(),
-        fleetInventoryScreen: (context) => const FleetInventoryScreen(),
-        aboutAppScreen: (context) => const AboutAppScreen(),
-      };
+    initial: (context) => const RideRequestScreen(),
+    rideRequest: (context) => const RideRequestScreen(),
+    liveTracking: (context) => const LiveTrackingScreen(),
+    splash: (context) => const SplashScreen(),
+    payment: (context) => const PaymentScreen(),
+    driverProfile: (context) => const DriverProfileScreen(),
+    authentication: (context) => const AuthenticationScreen(),
+    rideHistory: (context) => const RideHistoryScreen(),
+    locationDetection: (context) => const LocationDetectionScreen(),
+    bankInfoScreen: (context) => const BankInfoScreen(),
+    viewerDashboardScreen: (context) => const ViewerDashboardScreen(),
+    fleetInventoryScreen: (context) => const FleetInventoryScreen(),
+    aboutAppScreen: (context) => const AboutAppScreen(),
+    requiredDocumentsScreen: (context) => const RequiredDocumentsScreen(),
+  };
 
   /// Wraps a widget with route guard logic.
   static Widget _guardedRoute(
-      BuildContext context, String routeName, Widget screen) {
+    BuildContext context,
+    String routeName,
+    Widget screen,
+  ) {
     final redirect = guardRoute(routeName);
     if (redirect != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
