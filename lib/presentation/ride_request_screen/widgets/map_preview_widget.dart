@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_export.dart';
 import '../../../widgets/custom_icon_widget.dart';
-import '../../../widgets/dummy_map_widget.dart' hide LatLng, Marker;
 
 class MapPreviewWidget extends StatefulWidget {
   final String pickupLocation;

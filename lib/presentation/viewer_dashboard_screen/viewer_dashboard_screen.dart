@@ -9,7 +9,6 @@ import '../../routes/app_routes.dart';
 import '../../services/reservation_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/magic_link_auth_service.dart';
-import '../../widgets/custom_icon_widget.dart';
 
 /// Viewer Dashboard — Read-only overview for Admin role
 /// Shows key stats without edit capabilities

@@ -7,7 +7,6 @@ import '../../core/app_export.dart';
 import '../../services/magic_link_auth_service.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import './widgets/fare_estimation_widget.dart';
-import './widgets/magic_link_booking_dialog.dart';
 import './widgets/promo_banner_widget.dart';
 import './widgets/request_ride_button.dart';
 import './widgets/vehicle_selection_carousel.dart';
@@ -986,65 +985,9 @@ class _RideRequestScreenState extends State<RideRequestScreen> {
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
 
-    // Check if user is already authenticated
-    final currentUser = _authService.currentUser;
-    if (currentUser == null) {
-      setState(() => _isLoading = false);
-      // Show Magic Link auth dialog
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => MagicLinkBookingDialog(
-            onAuthSuccess: () {
-              // After auth, proceed to open messenger
-              _proceedWithBooking();
-            },
-          ),
-        );
-      }
-      return;
-    }
-
-    await _proceedWithBooking();
-  }
-
-  Future<void> _proceedWithBooking() async {
-    setState(() => _isLoading = true);
-    HapticFeedback.mediumImpact();
-
-    final currentUser = _authService.currentUser;
-    final role = _authService.currentUserRole;
-
-    // Show role-based greeting if Super_Admin
-    if (currentUser != null && role == 'Super_Admin' && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(
-                Icons.admin_panel_settings,
-                color: Colors.white,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '👑 ยินดีต้อนรับ Super_Admin: ${currentUser.email}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.amber.shade700,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-
-    await _openMessenger();
+    // Navigate to the new online booking flow
     setState(() => _isLoading = false);
+    Navigator.pushNamed(context, AppRoutes.carSelectionScreen);
   }
 
   void _showFareBredownModal() {

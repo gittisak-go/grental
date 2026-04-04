@@ -11,7 +11,7 @@ bool _hasShownError = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase
+  // Initialize Supabase (session is automatically restored by supabase_flutter)
   try {
     await SupabaseService.initialize();
   } catch (e) {
@@ -41,16 +41,41 @@ void main() async {
   });
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String _initialRoute = AppRoutes.splash;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveInitialRoute();
+  }
+
+  void _resolveInitialRoute() {
+    try {
+      final session = SupabaseService.instance.client.auth.currentSession;
+      setState(() {
+        _initialRoute =
+            session != null ? AppRoutes.rideRequest : AppRoutes.authentication;
+      });
+    } catch (_) {
+      setState(() => _initialRoute = AppRoutes.authentication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Sizer(
       builder: (context, orientation, screenType) {
         return MaterialApp(
-          title: 'rungrojcarrental',
+          title: 'รุ่งโรจน์คาร์เร้นท์',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.light,
+          themeMode: ThemeMode.dark,
           // 🚨 CRITICAL: NEVER REMOVE OR MODIFY
           builder: (context, child) {
             return MediaQuery(
@@ -63,10 +88,16 @@ class MyApp extends StatelessWidget {
           // 🚨 END CRITICAL SECTION
           debugShowCheckedModeBanner: false,
           routes: AppRoutes.routes,
-          initialRoute: AppRoutes.initial,
+          initialRoute: _initialRoute,
           onUnknownRoute: (settings) => MaterialPageRoute(
             builder: (context) => const Scaffold(
-              body: Center(child: Text('ไม่พบหน้าที่ต้องการ')),
+              backgroundColor: Color(0xFF0A0A12),
+              body: Center(
+                child: Text(
+                  'ไม่พบหน้าที่ต้องการ',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             ),
           ),
         );

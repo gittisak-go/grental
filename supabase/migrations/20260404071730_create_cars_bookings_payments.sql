@@ -39,6 +39,15 @@ CREATE INDEX IF NOT EXISTS idx_cars_price_per_day ON public.cars(price_per_day);
 CREATE INDEX IF NOT EXISTS idx_cars_vehicle_id ON public.cars(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_cars_is_active ON public.cars(is_active);
 
+-- Ensure columns exist if table was created without them
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS is_available BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS mileage INTEGER DEFAULT 0;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS last_service_date DATE;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
 -- ============================================================
 -- STEP 2: Create bookings table
 -- ============================================================

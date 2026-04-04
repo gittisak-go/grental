@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
-import '../../theme/app_theme.dart';
 import '../../services/magic_link_auth_service.dart';
 import '../../services/supabase_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import './widgets/app_logo_widget.dart';
 import './widgets/social_auth_buttons_widget.dart';
 
@@ -57,11 +56,11 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
     );
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _slideAnimationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
+      CurvedAnimation(
+        parent: _slideAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
     _fadeAnimationController.forward();
     _slideAnimationController.forward();
   }
@@ -69,9 +68,15 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
   void _listenAuthState() {
     _magicLinkService.authStateChanges.listen((authState) {
       if (authState.event == AuthChangeEvent.signedIn && mounted) {
-        _magicLinkService.upsertUserRole().then((_) {
+        _magicLinkService.upsertUserRole().then((role) {
           if (mounted) {
-            Navigator.pushReplacementNamed(context, '/ride-request-screen');
+            // Role-based redirect after login
+            if (role == 'Super_Admin' || role == 'Admin') {
+              Navigator.pushReplacementNamed(
+                  context, AppRoutes.adminDashboardScreen);
+            } else {
+              Navigator.pushReplacementNamed(context, AppRoutes.rideRequest);
+            }
           }
         });
       }
@@ -321,8 +326,8 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                           strokeWidth: 2,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                                theme.colorScheme.onPrimary,
-                                              ),
+                                            theme.colorScheme.onPrimary,
+                                          ),
                                         ),
                                       )
                                     : const Icon(Icons.send),
@@ -363,11 +368,11 @@ class _AuthenticationScreenState extends State<AuthenticationScreen>
                                   SizedBox(height: 1.h),
                                   Text(
                                     'ส่งลิงก์เข้าสู่ระบบแล้ว!',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   SizedBox(height: 0.5.h),
                                   Text(
